@@ -66,11 +66,7 @@ export default function LoginPage() {
           />
         </div>
 
-        {error && (
-          <p>
-            {error}
-          </p>
-        )}
+        {error && <p>{error}</p>}
 
         <button type="submit" disabled={loading}>
           {loading ? "Entrando..." : "Entrar"}
