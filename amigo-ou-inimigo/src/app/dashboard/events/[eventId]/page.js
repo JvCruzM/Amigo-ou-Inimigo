@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getEventStatusLabel } from "@/lib/event-status";
 
 export default function EventPage({ params }) {
   const [eventId, setEventId] = useState(null);
@@ -206,7 +207,7 @@ export default function EventPage({ params }) {
     <main>
       <header>
         <h1>{event.name}</h1>
-        <p>Status: {event.status}</p>
+        <p>Status: {getEventStatusLabel(event.status)}</p>
       </header>
 
       {error && <p>{error}</p>}
