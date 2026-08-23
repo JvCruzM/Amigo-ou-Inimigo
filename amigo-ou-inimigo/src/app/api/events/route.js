@@ -6,10 +6,7 @@ export async function GET() {
     const session = await auth();
 
     if (!session?.user?.id) {
-      return Response.json(
-        { error: "Não autenticado." },
-        { status: 401 }
-      );
+      return Response.json({ error: "Não autenticado." }, { status: 401 });
     }
 
     const events = await prisma.event.findMany({
@@ -29,7 +26,7 @@ export async function GET() {
 
     return Response.json(
       { error: "Erro interno ao buscar eventos." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -39,10 +36,7 @@ export async function POST(request) {
     const session = await auth();
 
     if (!session?.user?.id) {
-      return Response.json(
-        { error: "Não autenticado." },
-        { status: 401 }
-      );
+      return Response.json({ error: "Não autenticado." }, { status: 401 });
     }
 
     const body = await request.json();
@@ -51,30 +45,45 @@ export async function POST(request) {
     if (!name) {
       return Response.json(
         { error: "O nome do evento é obrigatório." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const event = await prisma.event.create({
-      data: {
-        name,
-        organizerId: session.user.id,
-      },
+    const result = await prisma.$transaction(async (tx) => {
+      const event = await tx.event.create({
+        data: {
+          name,
+          organizerId: session.user.id,
+        },
+      });
+
+      const participant = await tx.participant.create({
+        data: {
+          userId: session.user.id,
+          eventId: event.id,
+        },
+      });
+
+      return {
+        event,
+        participant,
+      };
     });
 
     return Response.json(
       {
         message: "Evento criado com sucesso.",
-        event,
+        event: result.event,
+        participant: result.participant,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     console.error("Erro ao criar evento:", error);
 
     return Response.json(
       { error: "Erro interno ao criar evento." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

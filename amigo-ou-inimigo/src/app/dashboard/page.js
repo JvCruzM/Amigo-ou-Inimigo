@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export default function DashboardPage() {
@@ -158,8 +159,10 @@ export default function DashboardPage() {
           <ul>
             {events.map((event) => (
               <li key={event.id}>
-                <strong>{event.name}</strong>
-                <span> — {event.status}</span>
+                <Link href={`/dashboard/events/${event.id}`}>
+                  <strong>{event.name}</strong>
+                  <span> — {event.status}</span>
+                </Link>
               </li>
             ))}
           </ul>
