@@ -30,6 +30,7 @@ model Event {
   organizer   User @relation("EventOrganizer", fields: [organizerId], references: [id])
 
   participants Participant[]
+  invitations EventInvitation[]
   draws        Draw[]
 }
 
@@ -64,6 +65,22 @@ model Draw {
 
   @@unique([eventId, giverId])
   @@unique([eventId, receiverId])
+}
+
+model EventInvitation {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  acceptedAt DateTime?
+
+  eventId String
+  event   Event @relation(fields: [eventId], references: [id])
+
+  @@unique([eventId, email])
 }
 
 enum EventStatus {

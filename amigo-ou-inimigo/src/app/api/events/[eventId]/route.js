@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import { getEventForOrganizer } from "@/lib/event-access";
 
 export async function GET(request, { params }) {
   try {
@@ -21,28 +21,20 @@ export async function GET(request, { params }) {
       );
     }
 
-    const event = await prisma.event.findUnique({
-      where: {
-        id: eventId,
-      },
-    });
+    const result = await getEventForOrganizer(
+      eventId,
+      session.user.id
+    );
 
-    if (!event) {
+    if (result.error) {
       return Response.json(
-        { error: "Evento não encontrado." },
-        { status: 404 }
-      );
-    }
-
-    if (event.organizerId !== session.user.id) {
-      return Response.json(
-        { error: "Você não tem permissão para acessar este evento." },
-        { status: 403 }
+        { error: result.error },
+        { status: result.status }
       );
     }
 
     return Response.json({
-      event,
+      event: result.event,
     });
   } catch (error) {
     console.error("Erro ao buscar evento:", error);
