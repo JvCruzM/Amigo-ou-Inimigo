@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { getEventStatusLabel } from "@/lib/event-status";
 
 export default function DashboardPage() {
   const [events, setEvents] = useState([]);
@@ -161,7 +162,7 @@ export default function DashboardPage() {
               <li key={event.id}>
                 <Link href={`/dashboard/events/${event.id}`}>
                   <strong>{event.name}</strong>
-                  <span> — {event.status}</span>
+                  <span> — {getEventStatusLabel(event.status)}</span>
                 </Link>
               </li>
             ))}
