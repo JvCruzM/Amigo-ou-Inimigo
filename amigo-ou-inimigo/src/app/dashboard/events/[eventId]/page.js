@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getEventStatusLabel } from "@/lib/event-status";
 
@@ -40,22 +41,18 @@ export default function EventPage({ params }) {
         const invitationsData = await invitationsResponse.json();
 
         if (!eventResponse.ok) {
-          throw new Error(
-            eventData.error || "Erro ao carregar evento."
-          );
+          throw new Error(eventData.error || "Erro ao carregar evento.");
         }
 
         if (!participantsResponse.ok) {
           throw new Error(
-            participantsData.error ||
-              "Erro ao carregar participantes."
+            participantsData.error || "Erro ao carregar participantes.",
           );
         }
 
         if (!invitationsResponse.ok) {
           throw new Error(
-            invitationsData.error ||
-              "Erro ao carregar convites."
+            invitationsData.error || "Erro ao carregar convites.",
           );
         }
 
@@ -102,23 +99,17 @@ export default function EventPage({ params }) {
       const invitationsData = await invitationsResponse.json();
 
       if (!eventResponse.ok) {
-        throw new Error(
-          eventData.error || "Erro ao atualizar evento."
-        );
+        throw new Error(eventData.error || "Erro ao atualizar evento.");
       }
 
       if (!participantsResponse.ok) {
         throw new Error(
-          participantsData.error ||
-            "Erro ao atualizar participantes."
+          participantsData.error || "Erro ao atualizar participantes.",
         );
       }
 
       if (!invitationsResponse.ok) {
-        throw new Error(
-          invitationsData.error ||
-            "Erro ao atualizar convites."
-        );
+        throw new Error(invitationsData.error || "Erro ao atualizar convites.");
       }
 
       setEvent(eventData.event);
@@ -143,31 +134,24 @@ export default function EventPage({ params }) {
       setInvitationMessage("");
       setError("");
 
-      const response = await fetch(
-        `/api/events/${eventId}/invitations`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: invitationEmail.trim(),
-          }),
-        }
-      );
+      const response = await fetch(`/api/events/${eventId}/invitations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: invitationEmail.trim(),
+        }),
+      });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.error || "Erro ao enviar convite."
-        );
+        throw new Error(data.error || "Erro ao enviar convite.");
       }
 
       setInvitationEmail("");
-      setInvitationMessage(
-        "Convite criado com sucesso."
-      );
+      setInvitationMessage("Convite criado com sucesso.");
 
       await refreshEventData();
     } catch (error) {
@@ -210,12 +194,20 @@ export default function EventPage({ params }) {
         <p>Status: {getEventStatusLabel(event.status)}</p>
       </header>
 
+      {event.status === "DRAWN" && (
+        <section>
+          <h2>Seu resultado</h2>
+
+          <Link href={`/dashboard/events/${event.id}/result`}>
+            Ver meu resultado
+          </Link>
+        </section>
+      )}
+
       {error && <p>{error}</p>}
 
       <section>
-        <h2>
-          Participantes ({participants.length})
-        </h2>
+        <h2>Participantes ({participants.length})</h2>
 
         {participants.length === 0 ? (
           <p>Nenhum participante ainda.</p>
@@ -237,61 +229,41 @@ export default function EventPage({ params }) {
         {event.status === "DRAFT" ? (
           <form onSubmit={handleSendInvitation}>
             <div>
-              <label htmlFor="invitation-email">
-                E-mail
-              </label>
+              <label htmlFor="invitation-email">E-mail</label>
 
               <input
                 id="invitation-email"
                 type="email"
                 value={invitationEmail}
-                onChange={(event) =>
-                  setInvitationEmail(event.target.value)
-                }
+                onChange={(event) => setInvitationEmail(event.target.value)}
                 placeholder="maria@exemplo.com"
                 disabled={sendingInvitation}
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={sendingInvitation}
-            >
-              {sendingInvitation
-                ? "Enviando..."
-                : "Enviar convite"}
+            <button type="submit" disabled={sendingInvitation}>
+              {sendingInvitation ? "Enviando..." : "Enviar convite"}
             </button>
 
-            {invitationMessage && (
-              <p>{invitationMessage}</p>
-            )}
+            {invitationMessage && <p>{invitationMessage}</p>}
           </form>
         ) : (
-          <p>
-            Não é possível enviar novos convites depois do
-            sorteio.
-          </p>
+          <p>Não é possível enviar novos convites depois do sorteio.</p>
         )}
       </section>
 
       <section>
-        <h2>
-          Convites ({invitations.length})
-        </h2>
+        <h2>Convites ({invitations.length})</h2>
 
         {invitations.length === 0 ? (
           <p>Nenhum convite enviado.</p>
         ) : (
           <ul>
             {invitations.map((invitation) => {
-              const accepted = Boolean(
-                invitation.acceptedAt
-              );
+              const accepted = Boolean(invitation.acceptedAt);
 
               const expired =
-                !accepted &&
-                new Date(invitation.expiresAt) <=
-                  new Date();
+                !accepted && new Date(invitation.expiresAt) <= new Date();
 
               let status = "Pendente";
 
