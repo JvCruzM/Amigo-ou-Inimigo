@@ -7,9 +7,20 @@ const geistSans = Geist({
 });
 
 export const metadata = {
-  title: "Amigo ou Inimigo",
+  title: {
+    default: "Amigo ou Inimigo",
+    template: "%s | Amigo ou Inimigo",
+  },
   description:
     "Organize seu evento, convide seus amigos e descubra seu resultado secreto.",
+  applicationName: "Amigo ou Inimigo",
+  openGraph: {
+    title: "Amigo ou Inimigo",
+    description:
+      "Organize seu evento, convide seus amigos e descubra seu resultado secreto.",
+    type: "website",
+    locale: "pt_BR",
+  },
 };
 
 export default function RootLayout({ children }) {

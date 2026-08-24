@@ -2,19 +2,21 @@
 
 import Link from "next/link";
 import { signIn } from "next-auth/react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { getSafeCallbackUrl } from "@/lib/safe-callback-url";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const callbackUrl =
-    searchParams.get("callbackUrl") || "/dashboard";
+  const callbackUrl = getSafeCallbackUrl(
+    searchParams.get("callbackUrl"),
+    "/dashboard",
+  );
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -50,31 +52,20 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center px-6 py-12">
       <section className="w-full max-w-md rounded-3xl border border-border bg-surface p-8 shadow-2xl">
         <header className="text-center">
-          <Link
-            href="/"
-            className="text-lg font-bold tracking-tight"
-          >
+          <Link href="/" className="text-lg font-bold tracking-tight">
             Amigo ou Inimigo
           </Link>
 
-          <h1 className="mt-8 text-3xl font-bold tracking-tight">
-            Entrar
-          </h1>
+          <h1 className="mt-8 text-3xl font-bold tracking-tight">Entrar</h1>
 
           <p className="mt-3 text-muted">
             Acesse seus eventos e descubra seus resultados.
           </p>
         </header>
 
-        <form
-          onSubmit={handleSubmit}
-          className="mt-8 space-y-5"
-        >
+        <form onSubmit={handleSubmit} className="mt-8 space-y-5">
           <div>
-            <label
-              htmlFor="email"
-              className="mb-2 block text-sm font-medium"
-            >
+            <label htmlFor="email" className="mb-2 block text-sm font-medium">
               E-mail
             </label>
 
@@ -82,9 +73,7 @@ export default function LoginPage() {
               id="email"
               type="email"
               value={email}
-              onChange={(event) =>
-                setEmail(event.target.value)
-              }
+              onChange={(event) => setEmail(event.target.value)}
               placeholder="voce@exemplo.com"
               autoComplete="email"
               disabled={loading}
@@ -105,9 +94,7 @@ export default function LoginPage() {
               id="password"
               type="password"
               value={password}
-              onChange={(event) =>
-                setPassword(event.target.value)
-              }
+              onChange={(event) => setPassword(event.target.value)}
               placeholder="Sua senha"
               autoComplete="current-password"
               disabled={loading}
@@ -136,9 +123,7 @@ export default function LoginPage() {
           <Link
             href={`/register${
               callbackUrl !== "/dashboard"
-                ? `?callbackUrl=${encodeURIComponent(
-                    callbackUrl
-                  )}`
+                ? `?callbackUrl=${encodeURIComponent(callbackUrl)}`
                 : ""
             }`}
             className="font-semibold text-foreground underline underline-offset-4"
@@ -148,5 +133,19 @@ export default function LoginPage() {
         </p>
       </section>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center px-6 py-12">
+          <p className="text-muted">Carregando...</p>
+        </main>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
