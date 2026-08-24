@@ -1,14 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const callbackUrl =
+    searchParams.get("callbackUrl") || "/dashboard";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -18,60 +24,129 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn("credentials", {
+        email: email.trim().toLowerCase(),
+        password,
+        redirect: false,
+      });
 
-    setLoading(false);
+      if (result?.error) {
+        setError("E-mail ou senha inválidos.");
+        return;
+      }
 
-    if (result?.error) {
-      setError("E-mail ou senha inválidos.");
-      return;
+      router.push(callbackUrl);
+      router.refresh();
+    } catch (error) {
+      console.error("Erro ao fazer login:", error);
+      setError("Não foi possível entrar. Tente novamente.");
+    } finally {
+      setLoading(false);
     }
-
-    router.push("/dashboard");
-    router.refresh();
   }
 
   return (
-    <main>
-      <h1>Amigo ou Inimigo?</h1>
+    <main className="flex min-h-screen items-center justify-center px-6 py-12">
+      <section className="w-full max-w-md rounded-3xl border border-border bg-surface p-8 shadow-2xl">
+        <header className="text-center">
+          <Link
+            href="/"
+            className="text-lg font-bold tracking-tight"
+          >
+            Amigo ou Inimigo
+          </Link>
 
-      <h2>Entrar</h2>
+          <h1 className="mt-8 text-3xl font-bold tracking-tight">
+            Entrar
+          </h1>
 
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="email">E-mail</label>
+          <p className="mt-3 text-muted">
+            Acesse seus eventos e descubra seus resultados.
+          </p>
+        </header>
 
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-          />
-        </div>
+        <form
+          onSubmit={handleSubmit}
+          className="mt-8 space-y-5"
+        >
+          <div>
+            <label
+              htmlFor="email"
+              className="mb-2 block text-sm font-medium"
+            >
+              E-mail
+            </label>
 
-        <div>
-          <label htmlFor="password">Senha</label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(event) =>
+                setEmail(event.target.value)
+              }
+              placeholder="voce@exemplo.com"
+              autoComplete="email"
+              disabled={loading}
+              required
+              className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none transition-colors focus:border-primary"
+            />
+          </div>
 
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-          />
-        </div>
+          <div>
+            <label
+              htmlFor="password"
+              className="mb-2 block text-sm font-medium"
+            >
+              Senha
+            </label>
 
-        {error && <p>{error}</p>}
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(event) =>
+                setPassword(event.target.value)
+              }
+              placeholder="Sua senha"
+              autoComplete="current-password"
+              disabled={loading}
+              required
+              className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none transition-colors focus:border-primary"
+            />
+          </div>
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Entrando..." : "Entrar"}
-        </button>
-      </form>
+          {error && (
+            <p className="rounded-xl border border-enemy/30 bg-enemy/10 px-4 py-3 text-sm text-enemy">
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-xl bg-primary px-5 py-3.5 font-semibold text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? "Entrando..." : "Entrar"}
+          </button>
+        </form>
+
+        <p className="mt-8 text-center text-sm text-muted">
+          Ainda não possui uma conta?{" "}
+          <Link
+            href={`/register${
+              callbackUrl !== "/dashboard"
+                ? `?callbackUrl=${encodeURIComponent(
+                    callbackUrl
+                  )}`
+                : ""
+            }`}
+            className="font-semibold text-foreground underline underline-offset-4"
+          >
+            Criar conta
+          </Link>
+        </p>
+      </section>
     </main>
   );
 }
