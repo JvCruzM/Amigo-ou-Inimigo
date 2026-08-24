@@ -1,15 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { getSafeCallbackUrl } from "@/lib/safe-callback-url";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const callbackUrl =
-    searchParams.get("callbackUrl") || "/login";
+  const callbackUrl = getSafeCallbackUrl(
+    searchParams.get("callbackUrl"),
+    "/login",
+  );
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -37,9 +40,7 @@ export default function RegisterPage() {
     }
 
     if (password.length < 6) {
-      setError(
-        "A senha deve ter pelo menos 6 caracteres."
-      );
+      setError("A senha deve ter pelo menos 6 caracteres.");
       return;
     }
 
@@ -66,14 +67,10 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.error || "Erro ao criar conta."
-        );
+        throw new Error(data.error || "Erro ao criar conta.");
       }
 
-      setSuccess(
-        "Conta criada com sucesso! Redirecionando..."
-      );
+      setSuccess("Conta criada com sucesso! Redirecionando...");
 
       setTimeout(() => {
         router.push(callbackUrl);
@@ -91,10 +88,7 @@ export default function RegisterPage() {
     <main className="flex min-h-screen items-center justify-center px-6 py-12">
       <section className="w-full max-w-md rounded-3xl border border-border bg-surface p-8 shadow-2xl">
         <header className="text-center">
-          <Link
-            href="/"
-            className="text-lg font-bold tracking-tight"
-          >
+          <Link href="/" className="text-lg font-bold tracking-tight">
             Amigo ou Inimigo
           </Link>
 
@@ -103,20 +97,13 @@ export default function RegisterPage() {
           </h1>
 
           <p className="mt-3 text-muted">
-            Crie sua conta para organizar ou participar de
-            eventos.
+            Crie sua conta para organizar ou participar de eventos.
           </p>
         </header>
 
-        <form
-          onSubmit={handleSubmit}
-          className="mt-8 space-y-5"
-        >
+        <form onSubmit={handleSubmit} className="mt-8 space-y-5">
           <div>
-            <label
-              htmlFor="name"
-              className="mb-2 block text-sm font-medium"
-            >
+            <label htmlFor="name" className="mb-2 block text-sm font-medium">
               Nome
             </label>
 
@@ -124,9 +111,7 @@ export default function RegisterPage() {
               id="name"
               type="text"
               value={name}
-              onChange={(event) =>
-                setName(event.target.value)
-              }
+              onChange={(event) => setName(event.target.value)}
               placeholder="Seu nome"
               autoComplete="name"
               disabled={loading}
@@ -136,10 +121,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label
-              htmlFor="email"
-              className="mb-2 block text-sm font-medium"
-            >
+            <label htmlFor="email" className="mb-2 block text-sm font-medium">
               E-mail
             </label>
 
@@ -147,9 +129,7 @@ export default function RegisterPage() {
               id="email"
               type="email"
               value={email}
-              onChange={(event) =>
-                setEmail(event.target.value)
-              }
+              onChange={(event) => setEmail(event.target.value)}
               placeholder="voce@exemplo.com"
               autoComplete="email"
               disabled={loading}
@@ -170,9 +150,7 @@ export default function RegisterPage() {
               id="password"
               type="password"
               value={password}
-              onChange={(event) =>
-                setPassword(event.target.value)
-              }
+              onChange={(event) => setPassword(event.target.value)}
               placeholder="Mínimo de 6 caracteres"
               autoComplete="new-password"
               disabled={loading}
@@ -193,9 +171,7 @@ export default function RegisterPage() {
               id="confirm-password"
               type="password"
               value={confirmPassword}
-              onChange={(event) =>
-                setConfirmPassword(event.target.value)
-              }
+              onChange={(event) => setConfirmPassword(event.target.value)}
               placeholder="Digite a senha novamente"
               autoComplete="new-password"
               disabled={loading}
@@ -230,9 +206,7 @@ export default function RegisterPage() {
           <Link
             href={`/login${
               callbackUrl !== "/login"
-                ? `?callbackUrl=${encodeURIComponent(
-                    callbackUrl
-                  )}`
+                ? `?callbackUrl=${encodeURIComponent(callbackUrl)}`
                 : ""
             }`}
             className="font-semibold text-foreground underline underline-offset-4"
@@ -242,5 +216,19 @@ export default function RegisterPage() {
         </p>
       </section>
     </main>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center px-6 py-12">
+          <p className="text-muted">Carregando...</p>
+        </main>
+      }
+    >
+      <RegisterForm />
+    </Suspense>
   );
 }
