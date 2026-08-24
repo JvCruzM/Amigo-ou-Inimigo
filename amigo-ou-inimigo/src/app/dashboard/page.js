@@ -19,37 +19,35 @@ export default function DashboardPage() {
     try {
       setError("");
 
-      const [organizedResponse, participatingResponse] =
-        await Promise.all([
-          fetch("/api/events"),
-          fetch("/api/events/participating"),
-        ]);
+      const [organizedResponse, participatingResponse] = await Promise.all([
+        fetch("/api/events"),
+        fetch("/api/events/participating"),
+      ]);
 
       const organizedData = await organizedResponse.json();
       const participatingData = await participatingResponse.json();
 
       if (!organizedResponse.ok) {
         throw new Error(
-          organizedData.error ||
-            "Erro ao carregar seus eventos."
+          organizedData.error || "Erro ao carregar seus eventos.",
         );
       }
 
       if (!participatingResponse.ok) {
         throw new Error(
           participatingData.error ||
-            "Erro ao carregar eventos dos quais você participa."
+            "Erro ao carregar eventos dos quais você participa.",
         );
       }
 
       setEvents(organizedData.events);
 
       const organizedEventIds = new Set(
-        organizedData.events.map((event) => event.id)
+        organizedData.events.map((event) => event.id),
       );
 
       const onlyParticipating = participatingData.events.filter(
-        (event) => !organizedEventIds.has(event.id)
+        (event) => !organizedEventIds.has(event.id),
       );
 
       setParticipatingEvents(onlyParticipating);
@@ -64,27 +62,24 @@ export default function DashboardPage() {
 
     async function fetchInitialEvents() {
       try {
-        const [organizedResponse, participatingResponse] =
-          await Promise.all([
-            fetch("/api/events"),
-            fetch("/api/events/participating"),
-          ]);
+        const [organizedResponse, participatingResponse] = await Promise.all([
+          fetch("/api/events"),
+          fetch("/api/events/participating"),
+        ]);
 
         const organizedData = await organizedResponse.json();
-        const participatingData =
-          await participatingResponse.json();
+        const participatingData = await participatingResponse.json();
 
         if (!organizedResponse.ok) {
           throw new Error(
-            organizedData.error ||
-              "Erro ao carregar seus eventos."
+            organizedData.error || "Erro ao carregar seus eventos.",
           );
         }
 
         if (!participatingResponse.ok) {
           throw new Error(
             participatingData.error ||
-              "Erro ao carregar eventos dos quais você participa."
+              "Erro ao carregar eventos dos quais você participa.",
           );
         }
 
@@ -92,13 +87,12 @@ export default function DashboardPage() {
           setEvents(organizedData.events);
 
           const organizedEventIds = new Set(
-            organizedData.events.map((event) => event.id)
+            organizedData.events.map((event) => event.id),
           );
 
-          const onlyParticipating =
-            participatingData.events.filter(
-              (event) => !organizedEventIds.has(event.id)
-            );
+          const onlyParticipating = participatingData.events.filter(
+            (event) => !organizedEventIds.has(event.id),
+          );
 
           setParticipatingEvents(onlyParticipating);
         }
@@ -147,9 +141,7 @@ export default function DashboardPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.error || "Erro ao criar evento."
-        );
+        throw new Error(data.error || "Erro ao criar evento.");
       }
 
       setName("");
@@ -188,26 +180,19 @@ export default function DashboardPage() {
         {showForm && (
           <form onSubmit={handleCreateEvent}>
             <div>
-              <label htmlFor="event-name">
-                Nome do evento
-              </label>
+              <label htmlFor="event-name">Nome do evento</label>
 
               <input
                 id="event-name"
                 type="text"
                 value={name}
-                onChange={(event) =>
-                  setName(event.target.value)
-                }
+                onChange={(event) => setName(event.target.value)}
                 placeholder="Ex.: Amigo ou Inimigo 2026"
                 disabled={creating}
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={creating}
-            >
+            <button type="submit" disabled={creating}>
               {creating ? "Criando..." : "Criar evento"}
             </button>
           </form>
@@ -223,14 +208,9 @@ export default function DashboardPage() {
           <ul>
             {events.map((event) => (
               <li key={event.id}>
-                <Link
-                  href={`/dashboard/events/${event.id}`}
-                >
+                <Link href={`/dashboard/events/${event.id}`}>
                   <strong>{event.name}</strong>
-                  <span>
-                    {" "}
-                    — {getEventStatusLabel(event.status)}
-                  </span>
+                  <span> — {getEventStatusLabel(event.status)}</span>
                 </Link>
               </li>
             ))}
@@ -243,21 +223,14 @@ export default function DashboardPage() {
           <h2>Eventos que participo</h2>
 
           {participatingEvents.length === 0 ? (
-            <p>
-              Você ainda não participa de nenhum outro evento.
-            </p>
+            <p>Você ainda não participa de nenhum outro evento.</p>
           ) : (
             <ul>
               {participatingEvents.map((event) => (
                 <li key={event.id}>
-                  <Link
-                    href={`/dashboard/events/${event.id}/result`}
-                  >
+                  <Link href={`/dashboard/participating/${event.id}`}>
                     <strong>{event.name}</strong>
-                    <span>
-                      {" "}
-                      — {getEventStatusLabel(event.status)}
-                    </span>
+                    <span> — {getEventStatusLabel(event.status)}</span>
                   </Link>
                 </li>
               ))}
