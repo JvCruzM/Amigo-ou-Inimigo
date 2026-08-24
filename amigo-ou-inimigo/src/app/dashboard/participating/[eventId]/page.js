@@ -56,25 +56,63 @@ export default function ParticipatingEventPage({ params }) {
 
   if (loading) {
     return (
-      <main>
-        <p>Carregando evento...</p>
+      <main className="min-h-screen bg-background text-foreground">
+        <div className="mx-auto flex min-h-screen w-full max-w-4xl items-center justify-center px-6">
+          <p className="text-muted">
+            Carregando evento...
+          </p>
+        </div>
       </main>
     );
   }
 
   if (error) {
     return (
-      <main>
-        <h1>Erro</h1>
-        <p>{error}</p>
+      <main className="min-h-screen bg-background text-foreground">
+        <div className="mx-auto flex min-h-screen w-full max-w-4xl items-center justify-center px-6">
+          <section className="w-full max-w-md rounded-3xl border border-border bg-surface p-8 text-center">
+            <h1 className="text-2xl font-bold">
+              Não foi possível carregar o evento
+            </h1>
+
+            <p className="mt-4 text-enemy">
+              {error}
+            </p>
+
+            <Link
+              href="/dashboard"
+              className="mt-6 inline-block font-semibold underline underline-offset-4"
+            >
+              Voltar para o Dashboard
+            </Link>
+          </section>
+        </div>
       </main>
     );
   }
 
   if (!participation) {
     return (
-      <main>
-        <h1>Participação não encontrada</h1>
+      <main className="min-h-screen bg-background text-foreground">
+        <div className="mx-auto flex min-h-screen w-full max-w-4xl items-center justify-center px-6">
+          <section className="w-full max-w-md rounded-3xl border border-border bg-surface p-8 text-center">
+            <h1 className="text-2xl font-bold">
+              Participação não encontrada
+            </h1>
+
+            <p className="mt-4 text-muted">
+              Você não possui uma participação válida neste
+              evento.
+            </p>
+
+            <Link
+              href="/dashboard"
+              className="mt-6 inline-block font-semibold underline underline-offset-4"
+            >
+              Voltar para o Dashboard
+            </Link>
+          </section>
+        </div>
       </main>
     );
   }
@@ -83,48 +121,105 @@ export default function ParticipatingEventPage({ params }) {
   const isDrawn = event.status === "DRAWN";
 
   return (
-    <main>
-      <header>
-        <h1>{event.name}</h1>
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto w-full max-w-4xl px-6 py-10">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-muted transition-colors hover:text-foreground"
+        >
+          ← Voltar para o Dashboard
+        </Link>
 
-        <p>
-          Status: {getEventStatusLabel(event.status)}
-        </p>
-      </header>
+        <header className="mt-8 rounded-3xl border border-border bg-surface p-8">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wider text-primary">
+                Sua participação
+              </p>
 
-      <section>
-        <h2>Você está participando</h2>
+              <h1 className="mt-2 text-4xl font-bold tracking-tight">
+                {event.name}
+              </h1>
 
-        <p>
-          Organizado por{" "}
-          <strong>{event.organizer.name}</strong>.
-        </p>
-      </section>
+              <p className="mt-3 text-muted">
+                Organizado por{" "}
+                <strong className="text-foreground">
+                  {event.organizer.name}
+                </strong>
+                .
+              </p>
+            </div>
 
-      {isDrawn ? (
-        <section>
-          <h2>Seu resultado está disponível</h2>
+            <span
+              className={`inline-flex w-fit rounded-full border px-4 py-2 text-sm font-semibold ${
+                isDrawn
+                  ? "border-primary/30 bg-primary/10 text-primary"
+                  : "border-border bg-background text-muted"
+              }`}
+            >
+              {getEventStatusLabel(event.status)}
+            </span>
+          </div>
+        </header>
 
-          <Link
-            href={`/dashboard/events/${event.id}/result`}
-          >
-            Ver meu resultado
-          </Link>
-        </section>
-      ) : (
-        <section>
-          <h2>O sorteio ainda não foi realizado</h2>
+        {!isDrawn ? (
+          <section className="mt-8 rounded-3xl border border-border bg-surface p-8">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-2xl">
+              ?
+            </div>
 
-          <p>
-            O organizador ainda está preparando o evento.
-          </p>
+            <p className="mt-8 text-sm font-semibold uppercase tracking-wider text-primary">
+              Tudo pronto?
+            </p>
 
-          <p>
-            Seu resultado aparecerá aqui depois que o
-            sorteio for realizado.
-          </p>
-        </section>
-      )}
+            <h2 className="mt-2 text-3xl font-bold tracking-tight">
+              O sorteio ainda não aconteceu.
+            </h2>
+
+            <p className="mt-4 max-w-2xl leading-7 text-muted">
+              Você já está participando deste evento. O
+              organizador ainda está preparando os
+              participantes e poderá realizar o sorteio
+              quando tudo estiver pronto.
+            </p>
+
+            <div className="mt-8 rounded-2xl border border-border bg-background p-5">
+              <p className="text-sm font-semibold">
+                Seu resultado ficará disponível aqui.
+              </p>
+
+              <p className="mt-2 text-sm leading-6 text-muted">
+                Quando o sorteio acontecer, você poderá
+                descobrir quem tirou e se o destino escolheu
+                AMIGO ou INIMIGO.
+              </p>
+            </div>
+          </section>
+        ) : (
+          <section className="mt-8 rounded-3xl border border-primary/20 bg-primary/5 p-8">
+            <p className="text-sm font-semibold uppercase tracking-wider text-primary">
+              O sorteio aconteceu
+            </p>
+
+            <h2 className="mt-2 text-3xl font-bold tracking-tight">
+              Seu resultado está disponível.
+            </h2>
+
+            <p className="mt-4 max-w-2xl leading-7 text-muted">
+              O sorteio foi realizado. Agora é hora de
+              descobrir quem ficou com você e qual foi o seu
+              lado da brincadeira.
+            </p>
+
+            <Link
+              href={`/dashboard/events/${event.id}/result`}
+              className="mt-8 inline-flex rounded-xl bg-primary px-6 py-3.5 font-semibold text-white transition-colors hover:bg-primary-hover"
+            >
+              Ver meu resultado
+            </Link>
+          </section>
+        )}
+      </div>
     </main>
   );
 }
