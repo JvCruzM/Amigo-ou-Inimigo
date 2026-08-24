@@ -16,6 +16,8 @@ export default function EventPage({ params }) {
   const [invitationEmail, setInvitationEmail] = useState("");
   const [sendingInvitation, setSendingInvitation] = useState(false);
   const [invitationMessage, setInvitationMessage] = useState("");
+  const [removingParticipantId, setRemovingParticipantId] = useState(null);
+  const [participantMessage, setParticipantMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -162,6 +164,45 @@ export default function EventPage({ params }) {
     }
   }
 
+  async function handleRemoveParticipant(participant) {
+    const confirmed = window.confirm(
+      `Tem certeza que deseja remover ${participant.user.name} deste evento?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setRemovingParticipantId(participant.id);
+      setParticipantMessage("");
+      setError("");
+
+      const response = await fetch(
+        `/api/events/${eventId}/participants/${participant.id}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erro ao remover participante.");
+      }
+
+      setParticipantMessage(`${participant.user.name} foi removido do evento.`);
+
+      await refreshEventData();
+    } catch (error) {
+      console.error("Erro ao remover participante:", error);
+
+      setParticipantMessage(error.message);
+    } finally {
+      setRemovingParticipantId(null);
+    }
+  }
+
   if (loading) {
     return (
       <main>
@@ -213,14 +254,38 @@ export default function EventPage({ params }) {
           <p>Nenhum participante ainda.</p>
         ) : (
           <ul>
-            {participants.map((participant) => (
-              <li key={participant.id}>
-                <strong>{participant.user.name}</strong>
-                <span> — {participant.user.email}</span>
-              </li>
-            ))}
+            {participants.map((participant) => {
+              const isOrganizer = participant.userId === event.organizerId;
+
+              return (
+                <li key={participant.id}>
+                  <strong>{participant.user.name}</strong>
+                  <span> — {participant.user.email}</span>
+
+                  {event.status === "DRAFT" && (
+                    <span>
+                      {isOrganizer ? (
+                        <span> — Organizador</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveParticipant(participant)}
+                          disabled={removingParticipantId === participant.id}
+                        >
+                          {removingParticipantId === participant.id
+                            ? "Removendo..."
+                            : "Remover"}
+                        </button>
+                      )}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
+
+        {participantMessage && <p>{participantMessage}</p>}
       </section>
 
       <section>
