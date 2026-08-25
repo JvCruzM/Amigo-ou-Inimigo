@@ -17,10 +17,10 @@ export default function EventPage({ params }) {
   const [sendingInvitation, setSendingInvitation] = useState(false);
   const [invitationMessage, setInvitationMessage] = useState("");
 
-  const [removingParticipantId, setRemovingParticipantId] =
-    useState(null);
-  const [participantMessage, setParticipantMessage] =
-    useState("");
+  const [removingParticipantId, setRemovingParticipantId] = useState(null);
+  const [participantMessage, setParticipantMessage] = useState("");
+  const [drawing, setDrawing] = useState(false);
+  const [drawMessage, setDrawMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -34,51 +34,36 @@ export default function EventPage({ params }) {
           setEventId(currentEventId);
         }
 
-        const [
-          eventResponse,
-          participantsResponse,
-          invitationsResponse,
-        ] = await Promise.all([
-          fetch(`/api/events/${currentEventId}`),
-          fetch(
-            `/api/events/${currentEventId}/participants`
-          ),
-          fetch(
-            `/api/events/${currentEventId}/invitations`
-          ),
-        ]);
+        const [eventResponse, participantsResponse, invitationsResponse] =
+          await Promise.all([
+            fetch(`/api/events/${currentEventId}`),
+            fetch(`/api/events/${currentEventId}/participants`),
+            fetch(`/api/events/${currentEventId}/invitations`),
+          ]);
 
         const eventData = await eventResponse.json();
-        const participantsData =
-          await participantsResponse.json();
-        const invitationsData =
-          await invitationsResponse.json();
+        const participantsData = await participantsResponse.json();
+        const invitationsData = await invitationsResponse.json();
 
         if (!eventResponse.ok) {
-          throw new Error(
-            eventData.error || "Erro ao carregar evento."
-          );
+          throw new Error(eventData.error || "Erro ao carregar evento.");
         }
 
         if (!participantsResponse.ok) {
           throw new Error(
-            participantsData.error ||
-              "Erro ao carregar participantes."
+            participantsData.error || "Erro ao carregar participantes.",
           );
         }
 
         if (!invitationsResponse.ok) {
           throw new Error(
-            invitationsData.error ||
-              "Erro ao carregar convites."
+            invitationsData.error || "Erro ao carregar convites.",
           );
         }
 
         if (!cancelled) {
           setEvent(eventData.event);
-          setParticipants(
-            participantsData.participants
-          );
+          setParticipants(participantsData.participants);
           setInvitations(invitationsData.invitations);
         }
       } catch (error) {
@@ -107,46 +92,33 @@ export default function EventPage({ params }) {
     }
 
     try {
-      const [
-        eventResponse,
-        participantsResponse,
-        invitationsResponse,
-      ] = await Promise.all([
-        fetch(`/api/events/${eventId}`),
-        fetch(`/api/events/${eventId}/participants`),
-        fetch(`/api/events/${eventId}/invitations`),
-      ]);
+      const [eventResponse, participantsResponse, invitationsResponse] =
+        await Promise.all([
+          fetch(`/api/events/${eventId}`),
+          fetch(`/api/events/${eventId}/participants`),
+          fetch(`/api/events/${eventId}/invitations`),
+        ]);
 
       const eventData = await eventResponse.json();
-      const participantsData =
-        await participantsResponse.json();
-      const invitationsData =
-        await invitationsResponse.json();
+      const participantsData = await participantsResponse.json();
+      const invitationsData = await invitationsResponse.json();
 
       if (!eventResponse.ok) {
-        throw new Error(
-          eventData.error || "Erro ao atualizar evento."
-        );
+        throw new Error(eventData.error || "Erro ao atualizar evento.");
       }
 
       if (!participantsResponse.ok) {
         throw new Error(
-          participantsData.error ||
-            "Erro ao atualizar participantes."
+          participantsData.error || "Erro ao atualizar participantes.",
         );
       }
 
       if (!invitationsResponse.ok) {
-        throw new Error(
-          invitationsData.error ||
-            "Erro ao atualizar convites."
-        );
+        throw new Error(invitationsData.error || "Erro ao atualizar convites.");
       }
 
       setEvent(eventData.event);
-      setParticipants(
-        participantsData.participants
-      );
+      setParticipants(participantsData.participants);
       setInvitations(invitationsData.invitations);
     } catch (error) {
       console.error("Erro ao atualizar evento:", error);
@@ -167,31 +139,24 @@ export default function EventPage({ params }) {
       setInvitationMessage("");
       setError("");
 
-      const response = await fetch(
-        `/api/events/${eventId}/invitations`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: invitationEmail.trim(),
-          }),
-        }
-      );
+      const response = await fetch(`/api/events/${eventId}/invitations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: invitationEmail.trim(),
+        }),
+      });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.error || "Erro ao enviar convite."
-        );
+        throw new Error(data.error || "Erro ao enviar convite.");
       }
 
       setInvitationEmail("");
-      setInvitationMessage(
-        "Convite criado com sucesso."
-      );
+      setInvitationMessage("Convite criado com sucesso.");
 
       await refreshEventData();
     } catch (error) {
@@ -204,7 +169,7 @@ export default function EventPage({ params }) {
 
   async function handleRemoveParticipant(participant) {
     const confirmed = window.confirm(
-      `Tem certeza que deseja remover ${participant.user.name} deste evento?`
+      `Tem certeza que deseja remover ${participant.user.name} deste evento?`,
     );
 
     if (!confirmed) {
@@ -220,31 +185,59 @@ export default function EventPage({ params }) {
         `/api/events/${eventId}/participants/${participant.id}`,
         {
           method: "DELETE",
-        }
+        },
       );
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.error || "Erro ao remover participante."
-        );
+        throw new Error(data.error || "Erro ao remover participante.");
       }
 
-      setParticipantMessage(
-        `${participant.user.name} foi removido do evento.`
-      );
+      setParticipantMessage(`${participant.user.name} foi removido do evento.`);
 
       await refreshEventData();
     } catch (error) {
-      console.error(
-        "Erro ao remover participante:",
-        error
-      );
+      console.error("Erro ao remover participante:", error);
 
       setParticipantMessage(error.message);
     } finally {
       setRemovingParticipantId(null);
+    }
+  }
+
+  async function handleDraw() {
+    const confirmed = window.confirm(
+      "Tem certeza que deseja realizar o sorteio?\n\nDepois disso, não será possível adicionar ou remover participantes nem realizar outro sorteio.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDrawing(true);
+      setDrawMessage("");
+      setError("");
+
+      const response = await fetch(`/api/events/${eventId}/draw`, {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erro ao realizar sorteio.");
+      }
+
+      setDrawMessage("Sorteio realizado com sucesso!");
+
+      await refreshEventData();
+    } catch (error) {
+      console.error("Erro ao realizar sorteio:", error);
+      setDrawMessage(error.message);
+    } finally {
+      setDrawing(false);
     }
   }
 
@@ -284,9 +277,7 @@ export default function EventPage({ params }) {
       <main className="min-h-screen bg-background text-foreground">
         <div className="mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-6">
           <section className="w-full max-w-md rounded-3xl border border-border bg-surface p-8 text-center">
-            <h1 className="text-2xl font-bold">
-              Evento não encontrado
-            </h1>
+            <h1 className="text-2xl font-bold">Evento não encontrado</h1>
 
             <Link
               href="/dashboard"
@@ -368,6 +359,59 @@ export default function EventPage({ params }) {
           )}
         </header>
 
+        {isDraft && (
+          <section className="mt-10">
+            <div className="rounded-3xl border border-primary/20 bg-primary/5 p-6 sm:p-8">
+              <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                <div className="max-w-2xl">
+                  <p className="text-sm font-semibold uppercase tracking-wider text-primary">
+                    Próximo passo
+                  </p>
+
+                  <h2 className="mt-2 text-2xl font-bold">
+                    Tudo pronto para o sorteio?
+                  </h2>
+
+                  <p className="mt-2 text-muted">
+                    Você possui{" "}
+                    <strong className="text-foreground">
+                      {participants.length}{" "}
+                      {participants.length === 1
+                        ? "participante"
+                        : "participantes"}
+                    </strong>
+                    .
+                    {participants.length >= 2
+                      ? " Quando realizar o sorteio, a composição do evento será congelada."
+                      : " É necessário ter pelo menos 2 participantes para realizar o sorteio."}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleDraw}
+                  disabled={drawing || participants.length < 2}
+                  className="shrink-0 rounded-xl bg-primary px-6 py-3.5 font-semibold text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {drawing ? "Realizando sorteio..." : "Realizar sorteio"}
+                </button>
+              </div>
+
+              {drawMessage && (
+                <p
+                  className={`mt-5 rounded-xl border px-4 py-3 text-sm ${
+                    drawMessage.includes("sucesso")
+                      ? "border-friend/30 bg-friend/10 text-friend"
+                      : "border-enemy/30 bg-enemy/10 text-enemy"
+                  }`}
+                >
+                  {drawMessage}
+                </p>
+              )}
+            </div>
+          </section>
+        )}
+
         {error && (
           <div className="mt-6 rounded-xl border border-enemy/30 bg-enemy/10 px-4 py-3 text-sm text-enemy">
             {error}
@@ -381,9 +425,7 @@ export default function EventPage({ params }) {
                 Pessoas
               </p>
 
-              <h2 className="mt-2 text-2xl font-bold">
-                Participantes
-              </h2>
+              <h2 className="mt-2 text-2xl font-bold">Participantes</h2>
             </div>
 
             <span className="rounded-full border border-border bg-surface px-3 py-1 text-sm text-muted">
@@ -398,16 +440,13 @@ export default function EventPage({ params }) {
               </h3>
 
               <p className="mt-2 text-muted">
-                Envie um convite para começar a montar seu
-                grupo.
+                Envie um convite para começar a montar seu grupo.
               </p>
             </div>
           ) : (
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               {participants.map((participant) => {
-                const isOrganizer =
-                  participant.userId ===
-                  event.organizerId;
+                const isOrganizer = participant.userId === event.organizerId;
 
                 return (
                   <article
@@ -435,19 +474,11 @@ export default function EventPage({ params }) {
                     {isDraft && !isOrganizer && (
                       <button
                         type="button"
-                        onClick={() =>
-                          handleRemoveParticipant(
-                            participant
-                          )
-                        }
-                        disabled={
-                          removingParticipantId ===
-                          participant.id
-                        }
+                        onClick={() => handleRemoveParticipant(participant)}
+                        disabled={removingParticipantId === participant.id}
                         className="mt-5 rounded-xl border border-enemy/30 px-4 py-2 text-sm font-semibold text-enemy transition-colors hover:bg-enemy/10 disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        {removingParticipantId ===
-                        participant.id
+                        {removingParticipantId === participant.id
                           ? "Removendo..."
                           : "Remover participante"}
                       </button>
@@ -472,9 +503,7 @@ export default function EventPage({ params }) {
                 Convite
               </p>
 
-              <h2 className="mt-2 text-2xl font-bold">
-                Convidar participante
-              </h2>
+              <h2 className="mt-2 text-2xl font-bold">Convidar participante</h2>
 
               <p className="mt-2 text-muted">
                 Envie um convite para alguém entrar no evento.
@@ -496,11 +525,7 @@ export default function EventPage({ params }) {
                     id="invitation-email"
                     type="email"
                     value={invitationEmail}
-                    onChange={(event) =>
-                      setInvitationEmail(
-                        event.target.value
-                      )
-                    }
+                    onChange={(event) => setInvitationEmail(event.target.value)}
                     placeholder="maria@exemplo.com"
                     disabled={sendingInvitation}
                     className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none transition-colors focus:border-primary"
@@ -512,9 +537,7 @@ export default function EventPage({ params }) {
                   disabled={sendingInvitation}
                   className="rounded-xl bg-primary px-5 py-3 font-semibold text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {sendingInvitation
-                    ? "Enviando..."
-                    : "Enviar convite"}
+                  {sendingInvitation ? "Enviando..." : "Enviar convite"}
                 </button>
               </form>
 
@@ -534,9 +557,7 @@ export default function EventPage({ params }) {
                 Convites
               </p>
 
-              <h2 className="mt-2 text-2xl font-bold">
-                Convites enviados
-              </h2>
+              <h2 className="mt-2 text-2xl font-bold">Convites enviados</h2>
             </div>
 
             <span className="rounded-full border border-border bg-surface px-3 py-1 text-sm text-muted">
@@ -546,22 +567,16 @@ export default function EventPage({ params }) {
 
           {invitations.length === 0 ? (
             <div className="mt-6 rounded-2xl border border-dashed border-border bg-surface/40 p-8">
-              <p className="text-muted">
-                Nenhum convite enviado.
-              </p>
+              <p className="text-muted">Nenhum convite enviado.</p>
             </div>
           ) : (
             <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-surface">
               <ul className="divide-y divide-border">
                 {invitations.map((invitation) => {
-                  const accepted = Boolean(
-                    invitation.acceptedAt
-                  );
+                  const accepted = Boolean(invitation.acceptedAt);
 
                   const expired =
-                    !accepted &&
-                    new Date(invitation.expiresAt) <=
-                      new Date();
+                    !accepted && new Date(invitation.expiresAt) <= new Date();
 
                   let status = "Pendente";
                   let statusClasses =
@@ -569,12 +584,10 @@ export default function EventPage({ params }) {
 
                   if (accepted) {
                     status = "Aceito";
-                    statusClasses =
-                      "border-friend/30 bg-friend/10 text-friend";
+                    statusClasses = "border-friend/30 bg-friend/10 text-friend";
                   } else if (expired) {
                     status = "Expirado";
-                    statusClasses =
-                      "border-enemy/30 bg-enemy/10 text-enemy";
+                    statusClasses = "border-enemy/30 bg-enemy/10 text-enemy";
                   }
 
                   return (
@@ -589,9 +602,9 @@ export default function EventPage({ params }) {
 
                         <p className="mt-1 text-xs text-muted">
                           Expira em{" "}
-                          {new Date(
-                            invitation.expiresAt
-                          ).toLocaleString("pt-BR")}
+                          {new Date(invitation.expiresAt).toLocaleString(
+                            "pt-BR",
+                          )}
                         </p>
                       </div>
 
