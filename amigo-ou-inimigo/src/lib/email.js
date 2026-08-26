@@ -1,6 +1,12 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
+});
 
 function escapeHtml(value) {
   return String(value)
@@ -21,9 +27,9 @@ export async function sendInvitationEmail({
   const safeOrganizerName = escapeHtml(organizerName);
   const safeInvitationUrl = escapeHtml(invitationUrl);
 
-  const { data, error } = await resend.emails.send({
-    from: "Amigo ou Inimigo <onboarding@resend.dev>",
-    to: [email],
+  const { messageId } = await transporter.sendMail({
+    from: `"Amigo ou Inimigo" <${process.env.GMAIL_USER}>`,
+    to: email,
     subject: `Você foi convidado para ${eventName}`,
     html: `
       <h1>Você foi convidado!</h1>
@@ -40,7 +46,17 @@ export async function sendInvitationEmail({
       </p>
 
       <p>
-        <a href="${safeInvitationUrl}">
+        <a
+          href="${safeInvitationUrl}"
+          style="
+            display: inline-block;
+            padding: 12px 20px;
+            background-color: #000;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+          "
+        >
           Ver convite
         </a>
       </p>
@@ -51,9 +67,5 @@ export async function sendInvitationEmail({
     `,
   });
 
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data;
+  return messageId;
 }
