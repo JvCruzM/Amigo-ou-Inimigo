@@ -69,3 +69,37 @@ export async function sendInvitationEmail({
 
   return messageId;
 }
+
+export async function sendPasswordResetEmail({
+  email,
+  resetUrl,
+}) {
+  await transporter.sendMail({
+    from: `"Amigo ou Inimigo" <${process.env.GMAIL_USER}>`,
+    to: email,
+    subject: "Redefinição de senha — Amigo ou Inimigo",
+    html: `
+      <h1>Redefinir sua senha</h1>
+
+      <p>
+        Recebemos uma solicitação para redefinir a senha da
+        sua conta do Amigo ou Inimigo.
+      </p>
+
+      <p>
+        <a href="${resetUrl}">
+          Redefinir minha senha
+        </a>
+      </p>
+
+      <p>
+        Este link é temporário e pode ser usado apenas uma vez.
+      </p>
+
+      <p>
+        Se você não solicitou essa alteração, ignore este
+        e-mail.
+      </p>
+    `,
+  });
+}
