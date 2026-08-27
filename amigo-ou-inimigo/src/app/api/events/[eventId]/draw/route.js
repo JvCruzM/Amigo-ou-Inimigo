@@ -81,6 +81,32 @@ async function executeDraw(eventId, userId) {
         })),
       });
 
+      const conversationPairs = draws.map((draw) => {
+        const [participantAId, participantBId] = [
+          draw.giverId,
+          draw.receiverId,
+        ].sort();
+
+        return {
+          eventId,
+          participantAId,
+          participantBId,
+        };
+      });
+
+      const uniqueConversationPairs = Array.from(
+        new Map(
+          conversationPairs.map((pair) => [
+            `${pair.eventId}:${pair.participantAId}:${pair.participantBId}`,
+            pair,
+          ]),
+        ).values(),
+      );
+
+      await tx.anonymousConversation.createMany({
+        data: uniqueConversationPairs,
+      });
+
       const updatedEvent = await tx.event.update({
         where: {
           id: eventId,
