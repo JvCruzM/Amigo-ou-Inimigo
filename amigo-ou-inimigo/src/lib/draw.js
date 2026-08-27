@@ -1,8 +1,16 @@
+import { randomInt } from "node:crypto";
+
+function secureRandom() {
+  const RANDOM_MAX = 1_000_000;
+
+  return randomInt(RANDOM_MAX) / RANDOM_MAX;
+}
+
 function shuffle(array) {
   const result = [...array];
 
   for (let i = result.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = randomInt(i + 1);
 
     [result[i], result[j]] = [result[j], result[i]];
   }
@@ -13,7 +21,7 @@ function shuffle(array) {
 function hasSelfDraw(participants, receivers) {
   return participants.some(
     (participant, index) =>
-      participant.id === receivers[index].id
+      participant.id === receivers[index].id,
   );
 }
 
@@ -24,17 +32,17 @@ export function generateDraw(participants) {
 
   if (participants.length < 2) {
     throw new Error(
-      "É necessário ter pelo menos 2 participantes para realizar o sorteio."
+      "É necessário ter pelo menos 2 participantes para realizar o sorteio.",
     );
   }
 
   const participantIds = new Set(
-    participants.map((participant) => participant.id)
+    participants.map((participant) => participant.id),
   );
 
   if (participantIds.size !== participants.length) {
     throw new Error(
-      "Os participantes não podem possuir IDs duplicados."
+      "Os participantes não podem possuir IDs duplicados.",
     );
   }
 
@@ -52,11 +60,11 @@ export function generateDraw(participants) {
   }
 
   throw new Error(
-    "Não foi possível gerar uma configuração válida de sorteio."
+    "Não foi possível gerar uma configuração válida de sorteio.",
   );
 }
 
-export function assignDrawTypes(draws, random = Math.random) {
+export function assignDrawTypes(draws, random = secureRandom) {
   if (!Array.isArray(draws)) {
     throw new TypeError("draws precisa ser um array.");
   }
