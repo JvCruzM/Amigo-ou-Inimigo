@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --test",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "test:draw-distribution": "node tests/test-draw-distribution.js",
+    "test:randomness": "node tests/test-randomness.js"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",
