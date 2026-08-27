@@ -5,6 +5,7 @@ import { signIn } from "next-auth/react";
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSafeCallbackUrl } from "@/lib/safe-callback-url";
+import PasswordInput from "@/components/PasswordInput";
 
 function LoginForm() {
   const router = useRouter();
@@ -71,24 +72,16 @@ function LoginForm() {
               Bem-vindo de volta
             </p>
 
-            <h1 className="mt-3 text-3xl font-bold tracking-tight">
-              Entrar
-            </h1>
+            <h1 className="mt-3 text-3xl font-bold tracking-tight">Entrar</h1>
 
             <p className="mt-3 leading-7 text-muted">
               Acesse sua conta para continuar.
             </p>
           </header>
 
-          <form
-            onSubmit={handleSubmit}
-            className="mt-8 space-y-5"
-          >
+          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             <div>
-              <label
-                htmlFor="email"
-                className="mb-2 block text-sm font-medium"
-              >
+              <label htmlFor="email" className="mb-2 block text-sm font-medium">
                 E-mail
               </label>
 
@@ -96,9 +89,7 @@ function LoginForm() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(event) =>
-                  setEmail(event.target.value)
-                }
+                onChange={(event) => setEmail(event.target.value)}
                 placeholder="voce@exemplo.com"
                 autoComplete="email"
                 disabled={loading}
@@ -108,25 +99,15 @@ function LoginForm() {
             </div>
 
             <div>
-              <label
-                htmlFor="password"
-                className="mb-2 block text-sm font-medium"
-              >
-                Senha
-              </label>
-
-              <input
+              <PasswordInput
                 id="password"
-                type="password"
+                label="Senha"
                 value={password}
-                onChange={(event) =>
-                  setPassword(event.target.value)
-                }
+                onChange={(event) => setPassword(event.target.value)}
                 placeholder="Sua senha"
                 autoComplete="current-password"
                 disabled={loading}
                 required
-                className="w-full rounded-2xl border border-border bg-background px-4 py-3.5 outline-none transition-all placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary/10"
               />
 
               <div className="mt-2 text-right">
@@ -165,9 +146,7 @@ function LoginForm() {
           </div>
 
           <div className="rounded-2xl border border-border bg-background p-5 text-center">
-            <p className="text-sm text-muted">
-              Ainda não possui uma conta?
-            </p>
+            <p className="text-sm text-muted">Ainda não possui uma conta?</p>
 
             <Link
               href={registerHref}

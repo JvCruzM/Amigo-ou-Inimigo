@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSafeCallbackUrl } from "@/lib/safe-callback-url";
+import PasswordInput from "@/components/PasswordInput";
 
 function RegisterForm() {
   const router = useRouter();
@@ -139,43 +140,27 @@ function RegisterForm() {
           </div>
 
           <div>
-            <label
-              htmlFor="password"
-              className="mb-2 block text-sm font-medium"
-            >
-              Senha
-            </label>
-
-            <input
+            <PasswordInput
               id="password"
-              type="password"
+              label="Senha"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="Mínimo de 6 caracteres"
               autoComplete="new-password"
               disabled={loading}
-              className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none transition-colors focus:border-primary"
               required
             />
           </div>
 
           <div>
-            <label
-              htmlFor="confirm-password"
-              className="mb-2 block text-sm font-medium"
-            >
-              Confirmar senha
-            </label>
-
-            <input
+            <PasswordInput
               id="confirm-password"
-              type="password"
+              label="Confirmar senha"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
               placeholder="Digite a senha novamente"
               autoComplete="new-password"
               disabled={loading}
-              className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none transition-colors focus:border-primary"
               required
             />
           </div>
