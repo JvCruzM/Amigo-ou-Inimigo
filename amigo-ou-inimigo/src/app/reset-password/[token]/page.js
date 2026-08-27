@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function ResetPasswordPage() {
   const params = useParams();
@@ -22,9 +23,7 @@ export default function ResetPasswordPage() {
     setSuccess("");
 
     if (password.length < 6) {
-      setError(
-        "A senha deve ter pelo menos 6 caracteres."
-      );
+      setError("A senha deve ter pelo menos 6 caracteres.");
       return;
     }
 
@@ -36,41 +35,30 @@ export default function ResetPasswordPage() {
     try {
       setLoading(true);
 
-      const response = await fetch(
-        "/api/auth/reset-password",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            token: params.token,
-            password,
-          }),
-        }
-      );
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token: params.token,
+          password,
+        }),
+      });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.error ||
-            "Não foi possível redefinir sua senha."
-        );
+        throw new Error(data.error || "Não foi possível redefinir sua senha.");
       }
 
-      setSuccess(
-        "Senha redefinida com sucesso! Redirecionando..."
-      );
+      setSuccess("Senha redefinida com sucesso! Redirecionando...");
 
       setTimeout(() => {
         router.push("/login");
       }, 1200);
     } catch (error) {
-      console.error(
-        "Erro ao redefinir senha:",
-        error
-      );
+      console.error("Erro ao redefinir senha:", error);
 
       setError(error.message);
     } finally {
@@ -107,58 +95,35 @@ export default function ResetPasswordPage() {
 
           <div className="mt-6 rounded-2xl border border-border bg-background p-4">
             <p className="text-sm leading-6 text-muted">
-              O link de recuperação é temporário e pode ser
-              usado apenas uma vez.
+              O link de recuperação é temporário e pode ser usado apenas uma
+              vez.
             </p>
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="mt-8 space-y-5"
-          >
+          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             <div>
-              <label
-                htmlFor="password"
-                className="mb-2 block text-sm font-medium"
-              >
-                Nova senha
-              </label>
-
-              <input
+              <PasswordInput
                 id="password"
-                type="password"
+                label="Nova senha"
                 value={password}
-                onChange={(event) =>
-                  setPassword(event.target.value)
-                }
+                onChange={(event) => setPassword(event.target.value)}
                 placeholder="Mínimo de 6 caracteres"
                 autoComplete="new-password"
                 disabled={loading}
                 required
-                className="w-full rounded-2xl border border-border bg-background px-4 py-3.5 outline-none transition-all placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary/10"
               />
             </div>
 
             <div>
-              <label
-                htmlFor="confirm-password"
-                className="mb-2 block text-sm font-medium"
-              >
-                Confirmar senha
-              </label>
-
-              <input
+              <PasswordInput
                 id="confirm-password"
-                type="password"
+                label="Confirmar senha"
                 value={confirmPassword}
-                onChange={(event) =>
-                  setConfirmPassword(event.target.value)
-                }
+                onChange={(event) => setConfirmPassword(event.target.value)}
                 placeholder="Digite a senha novamente"
                 autoComplete="new-password"
                 disabled={loading}
                 required
-                className="w-full rounded-2xl border border-border bg-background px-4 py-3.5 outline-none transition-all placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary/10"
               />
             </div>
 
@@ -179,9 +144,7 @@ export default function ResetPasswordPage() {
               disabled={loading}
               className="w-full rounded-2xl bg-primary px-5 py-3.5 font-semibold text-white transition-all hover:bg-primary-hover hover:shadow-lg hover:shadow-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading
-                ? "Salvando..."
-                : "Redefinir senha"}
+              {loading ? "Salvando..." : "Redefinir senha"}
             </button>
           </form>
 
