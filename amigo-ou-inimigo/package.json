@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test",
+    "test": "node --env-file=.env --test",
     "postinstall": "prisma generate",
     "test:draw-distribution": "node tests/test-draw-distribution.js",
     "test:randomness": "node tests/test-randomness.js"

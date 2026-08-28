@@ -1,15 +1,14 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { encryptMessage } from "@/lib/message-encryption";
+import { decryptMessage } from "@/lib/message-encryption";
 
 export async function GET(request, { params }) {
   try {
     const session = await auth();
 
     if (!session?.user?.id) {
-      return Response.json(
-        { error: "Não autenticado." },
-        { status: 401 },
-      );
+      return Response.json({ error: "Não autenticado." }, { status: 401 });
     }
 
     const { eventId } = await params;
@@ -62,76 +61,70 @@ export async function GET(request, { params }) {
     if (event.status !== "DRAWN") {
       return Response.json(
         {
-          error:
-            "As mensagens anônimas só estão disponíveis após o sorteio.",
+          error: "As mensagens anônimas só estão disponíveis após o sorteio.",
         },
         { status: 409 },
       );
     }
 
-    const conversations =
-      await prisma.anonymousConversation.findMany({
-        where: {
-          eventId,
-          OR: [
-            {
-              participantAId: participant.id,
-            },
-            {
-              participantBId: participant.id,
-            },
-          ],
-        },
-        select: {
-          id: true,
-          createdAt: true,
-          participantAId: true,
-          participantBId: true,
-          messages: {
-            orderBy: {
-              createdAt: "asc",
-            },
-            select: {
-              id: true,
-              content: true,
-              createdAt: true,
-              readAt: true,
-              senderId: true,
-            },
+    const conversations = await prisma.anonymousConversation.findMany({
+      where: {
+        eventId,
+        OR: [
+          {
+            participantAId: participant.id,
+          },
+          {
+            participantBId: participant.id,
+          },
+        ],
+      },
+      select: {
+        id: true,
+        createdAt: true,
+        participantAId: true,
+        participantBId: true,
+        messages: {
+          orderBy: {
+            createdAt: "asc",
+          },
+          select: {
+            id: true,
+            content: true,
+            createdAt: true,
+            readAt: true,
+            senderId: true,
           },
         },
-        orderBy: {
-          updatedAt: "desc",
-        },
-      });
+      },
+      orderBy: {
+        updatedAt: "desc",
+      },
+    });
 
     const formattedConversations = conversations.map(
-      (conversation) => ({
-        id: conversation.id,
-        createdAt: conversation.createdAt,
-        messages: conversation.messages.map((message) => ({
-          id: message.id,
-          content: message.content,
-          createdAt: message.createdAt,
-          readAt: message.readAt,
-          isMine: message.senderId === participant.id,
-        })),
-      }),
-    );
+  (conversation) => ({
+    id: conversation.id,
+    createdAt: conversation.createdAt,
+    messages: conversation.messages.map((message) => ({
+      id: message.id,
+      content: decryptMessage(message.content),
+      createdAt: message.createdAt,
+      readAt: message.readAt,
+      isMine: message.senderId === participant.id,
+    })),
+  }),
+);
 
     return Response.json({
       conversations: formattedConversations,
     });
   } catch (error) {
-    console.error(
-      "Erro ao buscar mensagens anônimas:",
-      error,
-    );
+    console.error("Erro ao buscar mensagens anônimas:", error);
 
     return Response.json(
       {
-        error:
-          "Erro interno ao buscar mensagens anônimas.",
+        error: "Erro interno ao buscar mensagens anônimas.",
       },
       { status: 500 },
     );
@@ -143,10 +136,7 @@ export async function POST(request, { params }) {
     const session = await auth();
 
     if (!session?.user?.id) {
-      return Response.json(
-        { error: "Não autenticado." },
-        { status: 401 },
-      );
+      return Response.json({ error: "Não autenticado." }, { status: 401 });
     }
 
     const { eventId } = await params;
@@ -166,9 +156,7 @@ export async function POST(request, { params }) {
         : "";
 
     const content =
-      typeof body?.content === "string"
-        ? body.content.trim()
-        : "";
+      typeof body?.content === "string" ? body.content.trim() : "";
 
     if (!conversationId) {
       return Response.json(
@@ -187,8 +175,7 @@ export async function POST(request, { params }) {
     if (content.length > 2000) {
       return Response.json(
         {
-          error:
-            "A mensagem não pode ter mais de 2000 caracteres.",
+          error: "A mensagem não pode ter mais de 2000 caracteres.",
         },
         { status: 400 },
       );
@@ -235,45 +222,44 @@ export async function POST(request, { params }) {
     if (event.status !== "DRAWN") {
       return Response.json(
         {
-          error:
-            "As mensagens anônimas só estão disponíveis após o sorteio.",
+          error: "As mensagens anônimas só estão disponíveis após o sorteio.",
         },
         { status: 409 },
       );
     }
 
-    const conversation =
-      await prisma.anonymousConversation.findFirst({
-        where: {
-          id: conversationId,
-          eventId,
-          OR: [
-            {
-              participantAId: participant.id,
-            },
-            {
-              participantBId: participant.id,
-            },
-          ],
-        },
-        select: {
-          id: true,
-        },
-      });
+    const conversation = await prisma.anonymousConversation.findFirst({
+      where: {
+        id: conversationId,
+        eventId,
+        OR: [
+          {
+            participantAId: participant.id,
+          },
+          {
+            participantBId: participant.id,
+          },
+        ],
+      },
+      select: {
+        id: true,
+      },
+    });
 
     if (!conversation) {
       return Response.json(
         {
-          error:
-            "Você não tem acesso a esta conversa.",
+          error: "Você não tem acesso a esta conversa.",
         },
         { status: 403 },
       );
     }
 
+    const encryptedContent = encryptMessage(content);
+
     const message = await prisma.anonymousMessage.create({
       data: {
-        content,
+        content: encryptedContent,
         conversationId: conversation.id,
         senderId: participant.id,
       },
@@ -297,22 +283,21 @@ export async function POST(request, { params }) {
     return Response.json(
       {
         message: {
-          ...message,
+          id: message.id,
+          content,
+          createdAt: message.createdAt,
+          readAt: message.readAt,
           isMine: true,
         },
       },
       { status: 201 },
     );
   } catch (error) {
-    console.error(
-      "Erro ao enviar mensagem anônima:",
-      error,
-    );
+    console.error("Erro ao enviar mensagem anônima:", error);
 
     return Response.json(
       {
-        error:
-          "Erro interno ao enviar mensagem anônima.",
+        error: "Erro interno ao enviar mensagem anônima.",
       },
       { status: 500 },
     );
