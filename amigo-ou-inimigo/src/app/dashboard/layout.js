@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 
+import UnreadMessagesBadge from "@/components/UnreadMessagesBadge";
+
 export default function DashboardLayout({ children }) {
   async function handleSignOut() {
     await signOut({
@@ -31,9 +33,10 @@ export default function DashboardLayout({ children }) {
 
             <Link
               href="/dashboard/messages"
-              className="rounded-xl px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface hover:text-foreground"
+              className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface hover:text-foreground"
             >
               Mensagens
+              <UnreadMessagesBadge />
             </Link>
 
             <button

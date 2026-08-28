@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { setRealtimeAuth, supabaseBrowser } from "@/lib/supabase-browser";
 
@@ -21,6 +21,41 @@ export default function MessagesPage() {
   const [error, setError] = useState("");
 
   const messagesEndRef = useRef(null);
+
+  const markConversationAsRead = useCallback(
+    async (selectedConversationId) => {
+      if (!selectedConversationId) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/events/${eventId}/messages/read`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            conversationId: selectedConversationId,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.error || "Não foi possível marcar as mensagens como lidas.",
+          );
+        }
+
+        window.dispatchEvent(new Event("unread-messages-updated"));
+
+        console.log("Mensagens marcadas como lidas:", data.updatedCount);
+      } catch (error) {
+        console.error("Erro ao marcar mensagens como lidas:", error);
+      }
+    },
+    [eventId],
+  );
 
   useEffect(() => {
     if (!eventId) {
@@ -75,7 +110,10 @@ export default function MessagesPage() {
         }
 
         setConversationId(selectedConversation.id);
+
         setMessages(selectedConversation.messages ?? []);
+
+        await markConversationAsRead(selectedConversation.id);
 
         await setRealtimeAuth();
 
@@ -118,6 +156,8 @@ export default function MessagesPage() {
                 }
 
                 setMessages(refreshedConversation.messages ?? []);
+
+                await markConversationAsRead(selectedConversation.id);
               } catch (error) {
                 console.error(
                   "Erro ao atualizar mensagens em tempo real:",
@@ -157,7 +197,7 @@ export default function MessagesPage() {
         supabaseBrowser.removeChannel(channel);
       }
     };
-  }, [eventId, requestedConversationId]);
+  }, [eventId, requestedConversationId, markConversationAsRead]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -368,6 +408,15 @@ export default function MessagesPage() {
             <textarea
               value={content}
               onChange={(event) => setContent(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+
+                  if (!sending && content.trim()) {
+                    event.currentTarget.form?.requestSubmit();
+                  }
+                }
+              }}
               placeholder="Digite sua mensagem..."
               rows={1}
               disabled={sending}
