@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { decryptMessage } from "@/lib/message-encryption";
 
 export async function GET() {
   try {
@@ -33,74 +34,66 @@ export async function GET() {
       });
     }
 
-    const participantIds = participants.map(
-      (participant) => participant.id,
-    );
+    const participantIds = participants.map((participant) => participant.id);
 
-    const conversations =
-      await prisma.anonymousConversation.findMany({
-        where: {
-          event: {
-            status: "DRAWN",
-          },
-          OR: [
-            {
-              participantAId: {
-                in: participantIds,
-              },
-            },
-            {
-              participantBId: {
-                in: participantIds,
-              },
-            },
-          ],
+    const conversations = await prisma.anonymousConversation.findMany({
+      where: {
+        event: {
+          status: "DRAWN",
         },
-        select: {
-          id: true,
-          eventId: true,
-          createdAt: true,
-          participantAId: true,
-          participantBId: true,
-          event: {
-            select: {
-              id: true,
-              name: true,
+        OR: [
+          {
+            participantAId: {
+              in: participantIds,
             },
           },
-          messages: {
-            orderBy: {
-              createdAt: "desc",
+          {
+            participantBId: {
+              in: participantIds,
             },
-            take: 1,
-            select: {
-              id: true,
-              content: true,
-              createdAt: true,
-              senderId: true,
-            },
+          },
+        ],
+      },
+      select: {
+        id: true,
+        eventId: true,
+        createdAt: true,
+        participantAId: true,
+        participantBId: true,
+        event: {
+          select: {
+            id: true,
+            name: true,
           },
         },
-      });
+        messages: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 1,
+          select: {
+            id: true,
+            content: true,
+            createdAt: true,
+            senderId: true,
+          },
+        },
+      },
+    });
 
     const participantByEventId = new Map(
-      participants.map((participant) => [
-        participant.eventId,
-        participant.id,
-      ]),
+      participants.map((participant) => [participant.eventId, participant.id]),
     );
 
     const result = conversations
       .map((conversation) => {
-        const participantId =
-          participantByEventId.get(conversation.eventId);
+        const participantId = participantByEventId.get(conversation.eventId);
 
         if (!participantId) {
           return null;
         }
 
-        const lastMessage =
-          conversation.messages[0] ?? null;
+        const lastMessage = conversation.messages[0] ?? null;
 
         return {
           conversationId: conversation.id,
@@ -109,10 +102,9 @@ export async function GET() {
           lastMessage: lastMessage
             ? {
                 id: lastMessage.id,
-                content: lastMessage.content,
+                content: decryptMessage(lastMessage.content),
                 createdAt: lastMessage.createdAt,
-                isMine:
-                  lastMessage.senderId === participantId,
+                isMine: lastMessage.senderId === participantId,
               }
             : null,
         };
@@ -141,15 +133,11 @@ export async function GET() {
       conversations: result,
     });
   } catch (error) {
-    console.error(
-      "Erro ao buscar conversas anônimas:",
-      error,
-    );
+    console.error("Erro ao buscar conversas anônimas:", error);
 
     return Response.json(
       {
-        error:
-          "Erro interno ao buscar conversas anônimas.",
+        error: "Erro interno ao buscar conversas anônimas.",
       },
       { status: 500 },
     );
