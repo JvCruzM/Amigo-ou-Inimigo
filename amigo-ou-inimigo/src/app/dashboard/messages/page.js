@@ -1,40 +1,111 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import {
+  setRealtimeAuth,
+  supabaseBrowser,
+} from "@/lib/supabase-browser";
 
 export default function MessagesPage() {
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const channelsRef = useRef([]);
+
+  const loadConversations = useCallback(async () => {
+    try {
+      const response = await fetch("/api/messages");
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ||
+            "Não foi possível carregar suas mensagens.",
+        );
+      }
+
+      setConversations(data.conversations ?? []);
+
+      return data.conversations ?? [];
+    } catch (error) {
+      console.error(
+        "Erro ao carregar mensagens:",
+        error,
+      );
+
+      setError(error.message);
+
+      return [];
+    }
+  }, []);
+
   useEffect(() => {
     let active = true;
 
-    async function loadConversations() {
+    async function initializeMessages() {
       try {
         setLoading(true);
         setError("");
 
-        const response = await fetch("/api/messages");
+        const availableConversations =
+          await loadConversations();
 
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            data.error ||
-              "Não foi possível carregar suas mensagens.",
-          );
+        if (!active || availableConversations.length === 0) {
+          return;
         }
+
+        await setRealtimeAuth();
 
         if (!active) {
           return;
         }
 
-        setConversations(data.conversations ?? []);
+        for (const conversation of availableConversations) {
+          const channel = supabaseBrowser
+            .channel(
+              `messages-list-${conversation.conversationId}`,
+            )
+            .on(
+              "postgres_changes",
+              {
+                event: "INSERT",
+                schema: "public",
+                table: "AnonymousMessage",
+                filter: `conversationId=eq.${conversation.conversationId}`,
+              },
+              async () => {
+                if (!active) {
+                  return;
+                }
+
+                await loadConversations();
+              },
+            )
+            .subscribe((status) => {
+              if (status === "SUBSCRIBED") {
+                console.log(
+                  "Realtime da lista conectado:",
+                  conversation.conversationId,
+                );
+              }
+
+              if (status === "CHANNEL_ERROR") {
+                console.error(
+                  "Erro no canal Realtime da lista:",
+                  conversation.conversationId,
+                );
+              }
+            });
+
+          channelsRef.current.push(channel);
+        }
       } catch (error) {
         console.error(
-          "Erro ao carregar mensagens:",
+          "Erro ao inicializar mensagens em tempo real:",
           error,
         );
 
@@ -48,12 +119,18 @@ export default function MessagesPage() {
       }
     }
 
-    loadConversations();
+    initializeMessages();
 
     return () => {
       active = false;
+
+      for (const channel of channelsRef.current) {
+        supabaseBrowser.removeChannel(channel);
+      }
+
+      channelsRef.current = [];
     };
-  }, []);
+  }, [loadConversations]);
 
   function formatMessageTime(date) {
     return new Intl.DateTimeFormat("pt-BR", {
@@ -124,6 +201,9 @@ export default function MessagesPage() {
               const lastMessage =
                 conversation.lastMessage;
 
+              const unreadCount =
+                conversation.unreadCount ?? 0;
+
               const href =
                 `/dashboard/events/${conversation.eventId}/messages` +
                 `?conversationId=${encodeURIComponent(
@@ -134,7 +214,11 @@ export default function MessagesPage() {
                 <Link
                   key={conversation.conversationId}
                   href={href}
-                  className="block px-5 py-5 transition-colors hover:bg-background sm:px-6"
+                  className={`block px-5 py-5 transition-colors hover:bg-background sm:px-6 ${
+                    unreadCount > 0
+                      ? "bg-primary/[0.03]"
+                      : ""
+                  }`}
                 >
                   <div className="flex items-start gap-4">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -155,17 +239,35 @@ export default function MessagesPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
-                          <p className="truncate font-semibold">
+                          <p
+                            className={`truncate ${
+                              unreadCount > 0
+                                ? "font-bold"
+                                : "font-semibold"
+                            }`}
+                          >
                             {conversation.eventName}
                           </p>
 
-                          <p className="mt-1 text-sm text-muted">
+                          <p
+                            className={`mt-1 text-sm ${
+                              unreadCount > 0
+                                ? "font-medium text-foreground"
+                                : "text-muted"
+                            }`}
+                          >
                             Conversa anônima
                           </p>
                         </div>
 
                         {lastMessage && (
-                          <span className="shrink-0 text-xs text-muted">
+                          <span
+                            className={`shrink-0 text-xs ${
+                              unreadCount > 0
+                                ? "font-semibold text-primary"
+                                : "text-muted"
+                            }`}
+                          >
                             {formatMessageTime(
                               lastMessage.createdAt,
                             )}
@@ -173,21 +275,44 @@ export default function MessagesPage() {
                         )}
                       </div>
 
-                      <div className="mt-2">
-                        {lastMessage ? (
-                          <p className="truncate text-sm text-muted">
-                            {lastMessage.content}
-                          </p>
-                        ) : (
-                          <p className="text-sm text-muted">
-                            Nenhuma mensagem ainda
-                          </p>
+                      <div className="mt-2 flex items-center justify-between gap-4">
+                        <div className="min-w-0 flex-1">
+                          {lastMessage ? (
+                            <p
+                              className={`truncate text-sm ${
+                                unreadCount > 0
+                                  ? "font-medium text-foreground"
+                                  : "text-muted"
+                              }`}
+                            >
+                              {lastMessage.content}
+                            </p>
+                          ) : (
+                            <p className="text-sm text-muted">
+                              Nenhuma mensagem ainda
+                            </p>
+                          )}
+                        </div>
+
+                        {unreadCount > 0 && (
+                          <span
+                            aria-label={`${unreadCount} ${
+                              unreadCount === 1
+                                ? "mensagem não lida"
+                                : "mensagens não lidas"
+                            }`}
+                            className="flex min-w-6 items-center justify-center rounded-full bg-primary px-2 py-1 text-xs font-bold leading-none text-white"
+                          >
+                            {unreadCount > 99
+                              ? "99+"
+                              : unreadCount}
+                          </span>
                         )}
                       </div>
                     </div>
 
                     <span
-                      className="mt-3 text-muted"
+                      className="mt-3 shrink-0 text-muted"
                       aria-hidden="true"
                     >
                       →
