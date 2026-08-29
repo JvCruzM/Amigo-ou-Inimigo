@@ -103,3 +103,51 @@ export async function sendPasswordResetEmail({
     `,
   });
 }
+
+export async function sendNewAnonymousMessageEmail({
+  email,
+  eventName,
+  appUrl,
+}) {
+  const safeEventName = escapeHtml(eventName);
+  const safeAppUrl = escapeHtml(appUrl);
+
+  await transporter.sendMail({
+    from: `"Amigo ou Inimigo" <${process.env.GMAIL_USER}>`,
+    to: email,
+    subject: "Você recebeu uma nova mensagem anônima",
+    html: `
+      <h1>Você recebeu uma nova mensagem anônima</h1>
+
+      <p>
+        Há uma nova mensagem esperando por você.
+      </p>
+
+      <p>
+        Evento:
+        <strong>${safeEventName}</strong>
+      </p>
+
+      <p>
+        Para preservar o anonimato, o conteúdo da mensagem
+        e a identidade de quem enviou não são exibidos neste e-mail.
+      </p>
+
+      <p>
+        <a
+          href="${safeAppUrl}/dashboard/messages"
+          style="
+            display: inline-block;
+            padding: 12px 20px;
+            background-color: #000;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+          "
+        >
+          Ver mensagem
+        </a>
+      </p>
+    `,
+  });
+}

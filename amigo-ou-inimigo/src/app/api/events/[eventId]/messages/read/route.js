@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request, { params }) {
@@ -6,17 +7,16 @@ export async function POST(request, { params }) {
     const session = await auth();
 
     if (!session?.user?.id) {
-      return Response.json(
-        { error: "Não autenticado." },
-        { status: 401 },
-      );
+      return Response.json({ error: "Não autenticado." }, { status: 401 });
     }
 
     const { eventId } = await params;
 
     if (!eventId) {
       return Response.json(
-        { error: "ID do evento não informado." },
+        {
+          error: "ID do evento não informado.",
+        },
         { status: 400 },
       );
     }
@@ -30,7 +30,9 @@ export async function POST(request, { params }) {
 
     if (!conversationId) {
       return Response.json(
-        { error: "ID da conversa não informado." },
+        {
+          error: "ID da conversa não informado.",
+        },
         { status: 400 },
       );
     }
@@ -76,70 +78,78 @@ export async function POST(request, { params }) {
     if (event.status !== "DRAWN") {
       return Response.json(
         {
-          error:
-            "As mensagens anônimas só estão disponíveis após o sorteio.",
+          error: "As mensagens anônimas só estão disponíveis após o sorteio.",
         },
         { status: 409 },
       );
     }
 
-    const conversation =
-      await prisma.anonymousConversation.findFirst({
-        where: {
-          id: conversationId,
-          eventId,
-          OR: [
-            {
-              participantAId: participant.id,
-            },
-            {
-              participantBId: participant.id,
-            },
-          ],
-        },
-        select: {
-          id: true,
-        },
-      });
+    const conversation = await prisma.anonymousConversation.findFirst({
+      where: {
+        id: conversationId,
+        eventId,
+        OR: [
+          {
+            participantAId: participant.id,
+          },
+          {
+            participantBId: participant.id,
+          },
+        ],
+      },
+      select: {
+        id: true,
+        participantAId: true,
+        participantBId: true,
+      },
+    });
 
     if (!conversation) {
       return Response.json(
         {
-          error:
-            "Você não tem acesso a esta conversa.",
+          error: "Você não tem acesso a esta conversa.",
         },
         { status: 403 },
       );
     }
 
-    const result =
-      await prisma.anonymousMessage.updateMany({
-        where: {
-          conversationId: conversation.id,
-          senderId: {
-            not: participant.id,
-          },
-          readAt: null,
+    const result = await prisma.anonymousMessage.updateMany({
+      where: {
+        conversationId: conversation.id,
+        senderId: {
+          not: participant.id,
         },
-        data: {
-          readAt: new Date(),
-        },
-      });
+        readAt: null,
+      },
+      data: {
+        readAt: new Date(),
+      },
+    });
+
+    const notificationField =
+      conversation.participantAId === participant.id
+        ? "emailNotificationSentAtA"
+        : "emailNotificationSentAtB";
+
+    await prisma.anonymousConversation.update({
+      where: {
+        id: conversation.id,
+      },
+      data: {
+        [notificationField]: null,
+      },
+    });
 
     return Response.json({
       message: "Mensagens marcadas como lidas.",
       updatedCount: result.count,
     });
   } catch (error) {
-    console.error(
-      "Erro ao marcar mensagens como lidas:",
-      error,
-    );
+    console.error("Erro ao marcar mensagens como lidas:", error);
 
     return Response.json(
       {
-        error:
-          "Erro interno ao marcar mensagens como lidas.",
+        error: "Erro interno ao marcar mensagens como lidas.",
       },
       { status: 500 },
     );

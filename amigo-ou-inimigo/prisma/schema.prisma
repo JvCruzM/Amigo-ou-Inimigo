@@ -121,6 +121,12 @@ model AnonymousConversation {
 
   messages AnonymousMessage[]
 
+  emailNotificationSentAtA DateTime?
+  emailNotificationSentAtB DateTime?
+
+  activeAtA DateTime?
+  activeAtB DateTime?
+
   @@unique([eventId, participantAId, participantBId])
   @@index([eventId])
   @@index([participantAId])

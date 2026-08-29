@@ -54,7 +54,10 @@ export default function MessagesPage() {
         const availableConversations =
           await loadConversations();
 
-        if (!active || availableConversations.length === 0) {
+        if (
+          !active ||
+          availableConversations.length === 0
+        ) {
           return;
         }
 
@@ -139,30 +142,59 @@ export default function MessagesPage() {
     }).format(new Date(date));
   }
 
+  function getConversationLabel(index) {
+    return `Conversa anônima ${index + 1}`;
+  }
+
   if (loading) {
     return (
       <main className="mx-auto flex min-h-[calc(100vh-73px)] w-full max-w-4xl items-center justify-center px-6 py-12">
-        <p className="text-muted">
-          Carregando mensagens...
-        </p>
+        <div className="flex items-center gap-3 text-muted">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+          <span className="h-2 w-2 animate-pulse rounded-full bg-primary [animation-delay:120ms]" />
+          <span className="h-2 w-2 animate-pulse rounded-full bg-primary [animation-delay:240ms]" />
+          <p className="ml-1 text-sm">
+            Carregando mensagens...
+          </p>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-6 py-10">
-      <header>
-        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary">
-          Conversas anônimas
-        </p>
+    <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
+      <header className="max-w-2xl">
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-5 w-5"
+              aria-hidden="true"
+            >
+              <path d="M21 11.5a8.38 8.38 0 0 1-1.9 5.4A8.5 8.5 0 0 1 12.5 20a8.38 8.38 0 0 1-3.5-.75L4 20l1.4-4.5A8.38 8.38 0 0 1 4.5 11.5a8.5 8.5 0 1 1 16.5 0Z" />
+            </svg>
+          </span>
 
-        <h1 className="mt-3 text-3xl font-bold tracking-tight">
-          Mensagens
-        </h1>
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary">
+              Conversas anônimas
+            </p>
 
-        <p className="mt-3 max-w-2xl leading-7 text-muted">
-          Converse anonimamente com as pessoas relacionadas
-          aos seus sorteios.
+            <h1 className="mt-1 text-3xl font-bold tracking-tight">
+              Mensagens
+            </h1>
+          </div>
+        </div>
+
+        <p className="mt-4 leading-7 text-muted">
+          Tire suas dúvidas, peça dicas e converse de forma
+          anônima com as pessoas relacionadas aos seus
+          sorteios.
         </p>
       </header>
 
@@ -173,20 +205,35 @@ export default function MessagesPage() {
       )}
 
       {!error && conversations.length === 0 && (
-        <section className="mt-8 rounded-[2rem] border border-border bg-surface p-8 text-center shadow-xl sm:p-10">
-          <div className="mx-auto max-w-md">
-            <h2 className="text-xl font-bold tracking-tight">
+        <section className="mt-8 overflow-hidden rounded-[2rem] border border-border bg-surface shadow-xl">
+          <div className="px-8 py-12 text-center sm:px-10 sm:py-14">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-primary/10 text-primary">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-7 w-7"
+                aria-hidden="true"
+              >
+                <path d="M21 11.5a8.38 8.38 0 0 1-1.9 5.4A8.5 8.5 0 0 1 12.5 20a8.38 8.38 0 0 1-3.5-.75L4 20l1.4-4.5A8.38 8.38 0 0 1 4.5 11.5a8.5 8.5 0 1 1 16.5 0Z" />
+              </svg>
+            </div>
+
+            <h2 className="mt-6 text-xl font-bold tracking-tight">
               Nenhuma conversa ainda
             </h2>
 
-            <p className="mt-3 leading-7 text-muted">
+            <p className="mx-auto mt-3 max-w-md leading-7 text-muted">
               Depois que um evento tiver o sorteio realizado,
               suas conversas anônimas aparecerão aqui.
             </p>
 
             <Link
               href="/dashboard"
-              className="mt-6 inline-flex items-center font-semibold text-foreground transition-colors hover:text-primary"
+              className="mt-7 inline-flex items-center font-semibold text-foreground transition-colors hover:text-primary"
             >
               ← Voltar para o Dashboard
             </Link>
@@ -196,8 +243,28 @@ export default function MessagesPage() {
 
       {conversations.length > 0 && (
         <section className="mt-8 overflow-hidden rounded-[2rem] border border-border bg-surface shadow-xl">
+          <div className="border-b border-border px-5 py-4 sm:px-6">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold">
+                  Suas conversas
+                </p>
+
+                <p className="mt-1 text-sm text-muted">
+                  {conversations.length === 1
+                    ? "1 conversa disponível"
+                    : `${conversations.length} conversas disponíveis`}
+                </p>
+              </div>
+
+              <div className="rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-muted">
+                Anônimo
+              </div>
+            </div>
+          </div>
+
           <div className="divide-y divide-border">
-            {conversations.map((conversation) => {
+            {conversations.map((conversation, index) => {
               const lastMessage =
                 conversation.lastMessage;
 
@@ -214,14 +281,20 @@ export default function MessagesPage() {
                 <Link
                   key={conversation.conversationId}
                   href={href}
-                  className={`block px-5 py-5 transition-colors hover:bg-background sm:px-6 ${
+                  className={`group block px-5 py-5 transition-colors hover:bg-background sm:px-6 ${
                     unreadCount > 0
-                      ? "bg-primary/[0.03]"
+                      ? "bg-primary/[0.035]"
                       : ""
                   }`}
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <div className="flex items-center gap-4">
+                    <div
+                      className={`flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl transition-colors ${
+                        unreadCount > 0
+                          ? "bg-primary/15 text-primary"
+                          : "bg-primary/10 text-primary"
+                      }`}
+                    >
                       <svg
                         viewBox="0 0 24 24"
                         fill="none"
@@ -239,15 +312,21 @@ export default function MessagesPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
-                          <p
-                            className={`truncate ${
-                              unreadCount > 0
-                                ? "font-bold"
-                                : "font-semibold"
-                            }`}
-                          >
-                            {conversation.eventName}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p
+                              className={`truncate ${
+                                unreadCount > 0
+                                  ? "font-bold"
+                                  : "font-semibold"
+                              }`}
+                            >
+                              {conversation.eventName}
+                            </p>
+
+                            {unreadCount > 0 && (
+                              <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />
+                            )}
+                          </div>
 
                           <p
                             className={`mt-1 text-sm ${
@@ -256,7 +335,7 @@ export default function MessagesPage() {
                                 : "text-muted"
                             }`}
                           >
-                            Conversa anônima
+                            {getConversationLabel(index)}
                           </p>
                         </div>
 
@@ -275,7 +354,7 @@ export default function MessagesPage() {
                         )}
                       </div>
 
-                      <div className="mt-2 flex items-center justify-between gap-4">
+                      <div className="mt-2 flex items-center gap-3">
                         <div className="min-w-0 flex-1">
                           {lastMessage ? (
                             <p
@@ -301,22 +380,22 @@ export default function MessagesPage() {
                                 ? "mensagem não lida"
                                 : "mensagens não lidas"
                             }`}
-                            className="flex min-w-6 items-center justify-center rounded-full bg-primary px-2 py-1 text-xs font-bold leading-none text-white"
+                            className="flex min-w-6 h-6 shrink-0 items-center justify-center rounded-full bg-primary px-2 text-xs font-bold leading-none text-white"
                           >
                             {unreadCount > 99
                               ? "99+"
                               : unreadCount}
                           </span>
                         )}
+
+                        <span
+                          className="shrink-0 text-lg text-muted transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-foreground"
+                          aria-hidden="true"
+                        >
+                          →
+                        </span>
                       </div>
                     </div>
-
-                    <span
-                      className="mt-3 shrink-0 text-muted"
-                      aria-hidden="true"
-                    >
-                      →
-                    </span>
                   </div>
                 </Link>
               );
