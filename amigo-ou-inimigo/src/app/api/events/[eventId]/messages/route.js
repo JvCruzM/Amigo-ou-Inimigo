@@ -1,7 +1,10 @@
 import { auth } from "@/auth";
+
 import { prisma } from "@/lib/prisma";
-import { encryptMessage } from "@/lib/message-encryption";
-import { decryptMessage } from "@/lib/message-encryption";
+
+import { encryptMessage, decryptMessage } from "@/lib/message-encryption";
+
+import { sendNewAnonymousMessageEmail } from "@/lib/email";
 
 export async function GET(request, { params }) {
   try {
@@ -102,19 +105,17 @@ export async function GET(request, { params }) {
       },
     });
 
-    const formattedConversations = conversations.map(
-  (conversation) => ({
-    id: conversation.id,
-    createdAt: conversation.createdAt,
-    messages: conversation.messages.map((message) => ({
-      id: message.id,
-      content: decryptMessage(message.content),
-      createdAt: message.createdAt,
-      readAt: message.readAt,
-      isMine: message.senderId === participant.id,
-    })),
-  }),
-);
+    const formattedConversations = conversations.map((conversation) => ({
+      id: conversation.id,
+      createdAt: conversation.createdAt,
+      messages: conversation.messages.map((message) => ({
+        id: message.id,
+        content: decryptMessage(message.content),
+        createdAt: message.createdAt,
+        readAt: message.readAt,
+        isMine: message.senderId === participant.id,
+      })),
+    }));
 
     return Response.json({
       conversations: formattedConversations,
@@ -160,14 +161,18 @@ export async function POST(request, { params }) {
 
     if (!conversationId) {
       return Response.json(
-        { error: "ID da conversa não informado." },
+        {
+          error: "ID da conversa não informado.",
+        },
         { status: 400 },
       );
     }
 
     if (!content) {
       return Response.json(
-        { error: "A mensagem não pode estar vazia." },
+        {
+          error: "A mensagem não pode estar vazia.",
+        },
         { status: 400 },
       );
     }
@@ -243,6 +248,39 @@ export async function POST(request, { params }) {
       },
       select: {
         id: true,
+        participantAId: true,
+        participantBId: true,
+
+        activeAtA: true,
+        activeAtB: true,
+
+        participantA: {
+          select: {
+            id: true,
+            user: {
+              select: {
+                email: true,
+              },
+            },
+          },
+        },
+
+        participantB: {
+          select: {
+            id: true,
+            user: {
+              select: {
+                email: true,
+              },
+            },
+          },
+        },
+
+        event: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
 
@@ -254,6 +292,24 @@ export async function POST(request, { params }) {
         { status: 403 },
       );
     }
+
+    const isParticipantA = conversation.participantAId === participant.id;
+
+    const recipient = isParticipantA
+      ? conversation.participantB
+      : conversation.participantA;
+
+    const notificationField = isParticipantA
+      ? "emailNotificationSentAtB"
+      : "emailNotificationSentAtA";
+
+    const recipientActiveAt = isParticipantA
+      ? conversation.activeAtB
+      : conversation.activeAtA;
+
+    const recipientIsActive =
+      recipientActiveAt &&
+      Date.now() - new Date(recipientActiveAt).getTime() < 30_000;
 
     const encryptedContent = encryptMessage(content);
 
@@ -279,6 +335,39 @@ export async function POST(request, { params }) {
         updatedAt: new Date(),
       },
     });
+
+    if (!recipientIsActive) {
+      const notificationClaim = await prisma.anonymousConversation.updateMany({
+        where: {
+          id: conversation.id,
+          [notificationField]: null,
+        },
+        data: {
+          [notificationField]: new Date(),
+        },
+      });
+
+      if (notificationClaim.count === 1) {
+        try {
+          await sendNewAnonymousMessageEmail({
+            email: recipient.user.email,
+            eventName: conversation.event.name,
+            appUrl: process.env.APP_URL,
+          });
+        } catch (emailError) {
+          console.error("Erro ao enviar e-mail de nova mensagem:", emailError);
+
+          await prisma.anonymousConversation.update({
+            where: {
+              id: conversation.id,
+            },
+            data: {
+              [notificationField]: null,
+            },
+          });
+        }
+      }
+    }
 
     return Response.json(
       {
