@@ -35,55 +35,112 @@ export async function GET() {
       });
     }
 
-    const participantIds = participants.map(
-      (participant) => participant.id,
+    const participantIds = participants.map((participant) => participant.id);
+
+    const participantByEventId = new Map(
+      participants.map((participant) => [participant.eventId, participant.id]),
     );
 
-    const conversations =
-      await prisma.anonymousConversation.findMany({
-        where: {
-          event: {
-            status: "DRAWN",
-          },
-          OR: [
-            {
-              participantAId: {
-                in: participantIds,
-              },
-            },
-            {
-              participantBId: {
-                in: participantIds,
-              },
-            },
-          ],
+    const conversations = await prisma.anonymousConversation.findMany({
+      where: {
+        event: {
+          status: "DRAWN",
         },
-        select: {
-          id: true,
-          eventId: true,
-          createdAt: true,
-          participantAId: true,
-          participantBId: true,
-          event: {
-            select: {
-              id: true,
-              name: true,
+        OR: [
+          {
+            participantAId: {
+              in: participantIds,
             },
           },
-          messages: {
-            orderBy: {
-              createdAt: "desc",
+          {
+            participantBId: {
+              in: participantIds,
             },
-            take: 1,
-            select: {
-              id: true,
-              content: true,
-              createdAt: true,
-              senderId: true,
-            },
+          },
+        ],
+      },
+      select: {
+        id: true,
+        eventId: true,
+        createdAt: true,
+        participantAId: true,
+        participantBId: true,
+        event: {
+          select: {
+            id: true,
+            name: true,
           },
         },
-      });
+        messages: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 1,
+          select: {
+            id: true,
+            content: true,
+            createdAt: true,
+            senderId: true,
+          },
+        },
+      },
+    });
+
+    const eventIds = [
+      ...new Set(conversations.map((conversation) => conversation.eventId)),
+    ];
+
+    const draws =
+      eventIds.length > 0
+        ? await prisma.draw.findMany({
+            where: {
+              eventId: {
+                in: eventIds,
+              },
+              OR: [
+                {
+                  giverId: {
+                    in: participantIds,
+                  },
+                },
+                {
+                  receiverId: {
+                    in: participantIds,
+                  },
+                },
+              ],
+            },
+            select: {
+              eventId: true,
+              giverId: true,
+              receiverId: true,
+            },
+          })
+        : [];
+
+    const drawByParticipantAndEvent = new Map();
+
+    for (const draw of draws) {
+      const currentParticipantId = participantByEventId.get(draw.eventId);
+
+      if (!currentParticipantId) {
+        continue;
+      }
+
+      if (draw.giverId === currentParticipantId) {
+        drawByParticipantAndEvent.set(
+          `${draw.eventId}:${currentParticipantId}:outgoing`,
+          draw.receiverId,
+        );
+      }
+
+      if (draw.receiverId === currentParticipantId) {
+        drawByParticipantAndEvent.set(
+          `${draw.eventId}:${currentParticipantId}:incoming`,
+          draw.giverId,
+        );
+      }
+    }
 
     const conversationIds = conversations.map(
       (conversation) => conversation.id,
@@ -109,49 +166,59 @@ export async function GET() {
         : [];
 
     const unreadCountByConversation = new Map(
-      unreadMessages.map((item) => [
-        item.conversationId,
-        item._count._all,
-      ]),
-    );
-
-    const participantByEventId = new Map(
-      participants.map((participant) => [
-        participant.eventId,
-        participant.id,
-      ]),
+      unreadMessages.map((item) => [item.conversationId, item._count._all]),
     );
 
     const result = conversations
       .map((conversation) => {
-        const participantId =
-          participantByEventId.get(conversation.eventId);
+        const participantId = participantByEventId.get(conversation.eventId);
 
         if (!participantId) {
           return null;
         }
 
-        const lastMessage =
-          conversation.messages[0] ?? null;
+        const outgoingReceiver =
+          drawByParticipantAndEvent.get(
+            `${conversation.eventId}:${participantId}:outgoing`,
+          ) ?? null;
+
+        const incomingGiver =
+          drawByParticipantAndEvent.get(
+            `${conversation.eventId}:${participantId}:incoming`,
+          ) ?? null;
+
+        const counterpartId =
+          conversation.participantAId === participantId
+            ? conversation.participantBId
+            : conversation.participantAId;
+
+        let relationship = "UNKNOWN";
+
+        if (
+          outgoingReceiver === counterpartId &&
+          incomingGiver === counterpartId
+        ) {
+          relationship = "MUTUAL";
+        } else if (outgoingReceiver === counterpartId) {
+          relationship = "I_DREW";
+        } else if (incomingGiver === counterpartId) {
+          relationship = "DREW_ME";
+        }
+
+        const lastMessage = conversation.messages[0] ?? null;
 
         return {
           conversationId: conversation.id,
           eventId: conversation.eventId,
           eventName: conversation.event.name,
-          unreadCount:
-            unreadCountByConversation.get(
-              conversation.id,
-            ) ?? 0,
+          relationship,
+          unreadCount: unreadCountByConversation.get(conversation.id) ?? 0,
           lastMessage: lastMessage
             ? {
                 id: lastMessage.id,
-                content: decryptMessage(
-                  lastMessage.content,
-                ),
+                content: decryptMessage(lastMessage.content),
                 createdAt: lastMessage.createdAt,
-                isMine:
-                  lastMessage.senderId ===
-                  participantId,
+                isMine: lastMessage.senderId === participantId,
               }
             : null,
         };
@@ -171,18 +238,13 @@ export async function GET() {
         }
 
         return (
-          new Date(
-            b.lastMessage.createdAt,
-          ).getTime() -
-          new Date(
-            a.lastMessage.createdAt,
-          ).getTime()
+          new Date(b.lastMessage.createdAt).getTime() -
+          new Date(a.lastMessage.createdAt).getTime()
         );
       });
 
     const totalUnreadCount = result.reduce(
-      (total, conversation) =>
-        total + conversation.unreadCount,
+      (total, conversation) => total + conversation.unreadCount,
       0,
     );
 
@@ -191,15 +253,11 @@ export async function GET() {
       totalUnreadCount,
     });
   } catch (error) {
-    console.error(
-      "Erro ao buscar conversas anônimas:",
-      error,
-    );
+    console.error("Erro ao buscar conversas anônimas:", error);
 
     return Response.json(
       {
-        error:
-          "Erro interno ao buscar conversas anônimas.",
+        error: "Erro interno ao buscar conversas anônimas.",
       },
       { status: 500 },
     );

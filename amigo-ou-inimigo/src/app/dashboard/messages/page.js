@@ -2,11 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-
-import {
-  setRealtimeAuth,
-  supabaseBrowser,
-} from "@/lib/supabase-browser";
+import { setRealtimeAuth, supabaseBrowser } from "@/lib/supabase-browser";
 
 export default function MessagesPage() {
   const [conversations, setConversations] = useState([]);
@@ -17,14 +13,15 @@ export default function MessagesPage() {
 
   const loadConversations = useCallback(async () => {
     try {
-      const response = await fetch("/api/messages");
+      const response = await fetch("/api/messages", {
+        cache: "no-store",
+      });
 
       const data = await response.json();
 
       if (!response.ok) {
         throw new Error(
-          data.error ||
-            "Não foi possível carregar suas mensagens.",
+          data.error || "Não foi possível carregar suas mensagens.",
         );
       }
 
@@ -32,10 +29,7 @@ export default function MessagesPage() {
 
       return data.conversations ?? [];
     } catch (error) {
-      console.error(
-        "Erro ao carregar mensagens:",
-        error,
-      );
+      console.error("Erro ao carregar mensagens:", error);
 
       setError(error.message);
 
@@ -49,15 +43,12 @@ export default function MessagesPage() {
     async function initializeMessages() {
       try {
         setLoading(true);
+
         setError("");
 
-        const availableConversations =
-          await loadConversations();
+        const availableConversations = await loadConversations();
 
-        if (
-          !active ||
-          availableConversations.length === 0
-        ) {
+        if (!active || availableConversations.length === 0) {
           return;
         }
 
@@ -69,9 +60,7 @@ export default function MessagesPage() {
 
         for (const conversation of availableConversations) {
           const channel = supabaseBrowser
-            .channel(
-              `messages-list-${conversation.conversationId}`,
-            )
+            .channel(`messages-list-${conversation.conversationId}`)
             .on(
               "postgres_changes",
               {
@@ -107,10 +96,7 @@ export default function MessagesPage() {
           channelsRef.current.push(channel);
         }
       } catch (error) {
-        console.error(
-          "Erro ao inicializar mensagens em tempo real:",
-          error,
-        );
+        console.error("Erro ao inicializar mensagens em tempo real:", error);
 
         if (active) {
           setError(error.message);
@@ -142,20 +128,202 @@ export default function MessagesPage() {
     }).format(new Date(date));
   }
 
-  function getConversationLabel(index) {
-    return `Conversa anônima ${index + 1}`;
+  function getConversationInfo(relationship) {
+    switch (relationship) {
+      case "I_DREW":
+        return {
+          label: "Pessoa que você sorteou",
+          description: "Conversa anônima com a pessoa sorteada por você",
+        };
+
+      case "DREW_ME":
+        return {
+          label: "Pessoa que sorteou você",
+          description: "Conversa anônima com a pessoa que tirou você",
+        };
+
+      case "MUTUAL":
+        return {
+          label: "Pessoa que você sorteou e que sorteou você",
+          description: "Conversa anônima recíproca",
+        };
+
+      default:
+        return {
+          label: "Conversa anônima",
+          description: "Conversa anônima",
+        };
+    }
   }
+
+  function renderConversation(conversation) {
+    const lastMessage = conversation.lastMessage;
+
+    const unreadCount = conversation.unreadCount ?? 0;
+
+    const conversationInfo = getConversationInfo(conversation.relationship);
+
+    const href =
+      `/dashboard/events/${conversation.eventId}/messages` +
+      `?conversationId=${encodeURIComponent(conversation.conversationId)}`;
+
+    return (
+      <Link
+        key={conversation.conversationId}
+        href={href}
+        className={`group block px-5 py-5 transition-colors hover:bg-background sm:px-6 ${
+          unreadCount > 0 ? "bg-primary/[0.035]" : ""
+        }`}
+      >
+        <div className="flex items-center gap-4">
+          <div
+            className={`flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl transition-colors ${
+              unreadCount > 0
+                ? "bg-primary/15 text-primary"
+                : "bg-primary/10 text-primary"
+            }`}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-5 w-5"
+              aria-hidden="true"
+            >
+              <path d="M21 11.5a8.38 8.38 0 0 1-1.9 5.4A8.5 8.5 0 0 1 12.5 20a8.38 8.38 0 0 1-3.5-.75L4 20l1.4-4.5A8.38 8.38 0 0 1 4.5 11.5a8.5 8.5 0 1 1 16.5 0Z" />
+            </svg>
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <p
+                    className={`truncate ${
+                      unreadCount > 0 ? "font-bold" : "font-semibold"
+                    }`}
+                  >
+                    {conversation.eventName}
+                  </p>
+
+                  {unreadCount > 0 && (
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />
+                  )}
+                </div>
+
+                <p
+                  className={`mt-1 text-sm ${
+                    unreadCount > 0
+                      ? "font-medium text-foreground"
+                      : "text-muted"
+                  }`}
+                >
+                  {conversationInfo.label}
+                </p>
+              </div>
+
+              {lastMessage && (
+                <span
+                  className={`shrink-0 text-xs ${
+                    unreadCount > 0
+                      ? "font-semibold text-primary"
+                      : "text-muted"
+                  }`}
+                >
+                  {formatMessageTime(lastMessage.createdAt)}
+                </span>
+              )}
+            </div>
+
+            <div className="mt-2 flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                {lastMessage ? (
+                  <p
+                    className={`truncate text-sm ${
+                      unreadCount > 0
+                        ? "font-medium text-foreground"
+                        : "text-muted"
+                    }`}
+                  >
+                    {lastMessage.content}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted">Nenhuma mensagem ainda</p>
+                )}
+              </div>
+
+              {unreadCount > 0 && (
+                <span
+                  aria-label={`${unreadCount} ${
+                    unreadCount === 1
+                      ? "mensagem não lida"
+                      : "mensagens não lidas"
+                  }`}
+                  className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-primary px-2 text-xs font-bold leading-none text-white"
+                >
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+
+              <span
+                className="shrink-0 text-lg text-muted transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-foreground"
+                aria-hidden="true"
+              >
+                →
+              </span>
+            </div>
+          </div>
+        </div>
+      </Link>
+    );
+  }
+
+  const conversationsIChose = conversations.filter(
+    (conversation) => conversation.relationship === "I_DREW",
+  );
+
+  const conversationsWhoChoseMe = conversations.filter(
+    (conversation) => conversation.relationship === "DREW_ME",
+  );
+
+  const mutualConversations = conversations.filter(
+    (conversation) => conversation.relationship === "MUTUAL",
+  );
+
+  const renderConversationSection = ({ title, description, items }) => {
+    if (items.length === 0) {
+      return null;
+    }
+
+    return (
+      <section className="overflow-hidden rounded-[2rem] border border-border bg-surface shadow-xl">
+        <div className="border-b border-border px-5 py-4 sm:px-6">
+          <p className="text-sm font-semibold">{title}</p>
+
+          <p className="mt-1 text-sm text-muted">{description}</p>
+        </div>
+
+        <div className="divide-y divide-border">
+          {items.map((conversation) => renderConversation(conversation))}
+        </div>
+      </section>
+    );
+  };
 
   if (loading) {
     return (
       <main className="mx-auto flex min-h-[calc(100vh-73px)] w-full max-w-4xl items-center justify-center px-6 py-12">
         <div className="flex items-center gap-3 text-muted">
           <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+
           <span className="h-2 w-2 animate-pulse rounded-full bg-primary [animation-delay:120ms]" />
+
           <span className="h-2 w-2 animate-pulse rounded-full bg-primary [animation-delay:240ms]" />
-          <p className="ml-1 text-sm">
-            Carregando mensagens...
-          </p>
+
+          <p className="ml-1 text-sm">Carregando mensagens...</p>
         </div>
       </main>
     );
@@ -192,9 +360,8 @@ export default function MessagesPage() {
         </div>
 
         <p className="mt-4 leading-7 text-muted">
-          Tire suas dúvidas, peça dicas e converse de forma
-          anônima com as pessoas relacionadas aos seus
-          sorteios.
+          Tire suas dúvidas, peça dicas e converse de forma anônima com as
+          pessoas relacionadas aos seus sorteios.
         </p>
       </header>
 
@@ -227,8 +394,8 @@ export default function MessagesPage() {
             </h2>
 
             <p className="mx-auto mt-3 max-w-md leading-7 text-muted">
-              Depois que um evento tiver o sorteio realizado,
-              suas conversas anônimas aparecerão aqui.
+              Depois que um evento tiver o sorteio realizado, suas conversas
+              anônimas aparecerão aqui.
             </p>
 
             <Link
@@ -242,166 +409,26 @@ export default function MessagesPage() {
       )}
 
       {conversations.length > 0 && (
-        <section className="mt-8 overflow-hidden rounded-[2rem] border border-border bg-surface shadow-xl">
-          <div className="border-b border-border px-5 py-4 sm:px-6">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold">
-                  Suas conversas
-                </p>
+        <div className="mt-8 space-y-6">
+          {renderConversationSection({
+            title: "Pessoas que você sorteou",
+            description: "Conversas com as pessoas que você tirou no sorteio.",
+            items: conversationsIChose,
+          })}
 
-                <p className="mt-1 text-sm text-muted">
-                  {conversations.length === 1
-                    ? "1 conversa disponível"
-                    : `${conversations.length} conversas disponíveis`}
-                </p>
-              </div>
+          {renderConversationSection({
+            title: "Pessoas que sortearam você",
+            description:
+              "Conversas com as pessoas que tiraram você no sorteio.",
+            items: conversationsWhoChoseMe,
+          })}
 
-              <div className="rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-muted">
-                Anônimo
-              </div>
-            </div>
-          </div>
-
-          <div className="divide-y divide-border">
-            {conversations.map((conversation, index) => {
-              const lastMessage =
-                conversation.lastMessage;
-
-              const unreadCount =
-                conversation.unreadCount ?? 0;
-
-              const href =
-                `/dashboard/events/${conversation.eventId}/messages` +
-                `?conversationId=${encodeURIComponent(
-                  conversation.conversationId,
-                )}`;
-
-              return (
-                <Link
-                  key={conversation.conversationId}
-                  href={href}
-                  className={`group block px-5 py-5 transition-colors hover:bg-background sm:px-6 ${
-                    unreadCount > 0
-                      ? "bg-primary/[0.035]"
-                      : ""
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div
-                      className={`flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl transition-colors ${
-                        unreadCount > 0
-                          ? "bg-primary/15 text-primary"
-                          : "bg-primary/10 text-primary"
-                      }`}
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="h-5 w-5"
-                        aria-hidden="true"
-                      >
-                        <path d="M21 11.5a8.38 8.38 0 0 1-1.9 5.4A8.5 8.5 0 0 1 12.5 20a8.38 8.38 0 0 1-3.5-.75L4 20l1.4-4.5A8.38 8.38 0 0 1 4.5 11.5a8.5 8.5 0 1 1 16.5 0Z" />
-                      </svg>
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p
-                              className={`truncate ${
-                                unreadCount > 0
-                                  ? "font-bold"
-                                  : "font-semibold"
-                              }`}
-                            >
-                              {conversation.eventName}
-                            </p>
-
-                            {unreadCount > 0 && (
-                              <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />
-                            )}
-                          </div>
-
-                          <p
-                            className={`mt-1 text-sm ${
-                              unreadCount > 0
-                                ? "font-medium text-foreground"
-                                : "text-muted"
-                            }`}
-                          >
-                            {getConversationLabel(index)}
-                          </p>
-                        </div>
-
-                        {lastMessage && (
-                          <span
-                            className={`shrink-0 text-xs ${
-                              unreadCount > 0
-                                ? "font-semibold text-primary"
-                                : "text-muted"
-                            }`}
-                          >
-                            {formatMessageTime(
-                              lastMessage.createdAt,
-                            )}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="mt-2 flex items-center gap-3">
-                        <div className="min-w-0 flex-1">
-                          {lastMessage ? (
-                            <p
-                              className={`truncate text-sm ${
-                                unreadCount > 0
-                                  ? "font-medium text-foreground"
-                                  : "text-muted"
-                              }`}
-                            >
-                              {lastMessage.content}
-                            </p>
-                          ) : (
-                            <p className="text-sm text-muted">
-                              Nenhuma mensagem ainda
-                            </p>
-                          )}
-                        </div>
-
-                        {unreadCount > 0 && (
-                          <span
-                            aria-label={`${unreadCount} ${
-                              unreadCount === 1
-                                ? "mensagem não lida"
-                                : "mensagens não lidas"
-                            }`}
-                            className="flex min-w-6 h-6 shrink-0 items-center justify-center rounded-full bg-primary px-2 text-xs font-bold leading-none text-white"
-                          >
-                            {unreadCount > 99
-                              ? "99+"
-                              : unreadCount}
-                          </span>
-                        )}
-
-                        <span
-                          className="shrink-0 text-lg text-muted transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-foreground"
-                          aria-hidden="true"
-                        >
-                          →
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
+          {renderConversationSection({
+            title: "Conversas recíprocas",
+            description: "Quando você e a outra pessoa sortearam um ao outro.",
+            items: mutualConversations,
+          })}
+        </div>
       )}
     </main>
   );
