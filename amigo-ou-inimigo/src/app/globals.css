@@ -55,6 +55,13 @@ body {
   min-height: 100vh;
 }
 
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
 .chat-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: rgb(148 163 184 / 0.35) transparent;
