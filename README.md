@@ -4,6 +4,8 @@
 
 🌐 **Aplicação em produção:** https://amigo-ou-inimigo.vercel.app
 
+<img width="1920" height="1080" alt="Home" src="https://github.com/user-attachments/assets/e1946fa1-2c4c-4005-abc5-82c62ea4144d" />
+
 ## Sobre o projeto
 
 **Amigo ou Inimigo** é uma aplicação web para organizar um sorteio secreto entre amigos.
